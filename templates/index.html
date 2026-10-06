@@ -356,8 +356,9 @@
           <button onclick="copyToClipboard('audio-raw-text', 'Ses Metni')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
             <i class="fa-solid fa-copy mr-1"></i> Kopyala
           </button>
-          <button onclick="sendToNewsWriter()" class="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition">
-            <i class="fa-solid fa-share mr-1"></i> Haber Yazarına Aktar
+          <button onclick="sendToNewsWriter()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+            <span>2. Adım: Haber Yazarına Aktar</span>
+            <i class="fa-solid fa-arrow-right"></i>
           </button>
           <button onclick="exportDocx('audio-raw-text', 'Ses_Cozumleme_Metni')" class="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition shadow-sm">
             <i class="fa-solid fa-file-word mr-1"></i> Word (.docx) İndir
@@ -446,15 +447,20 @@
         <input type="hidden" id="news-raw-result">
         <div id="news-result-text" class="markdown-body text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
 
-        <div class="flex items-center justify-end gap-2 pt-2">
-          <button onclick="copyToClipboard('news-raw-result', 'Haber Metni')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
-            <i class="fa-solid fa-copy mr-1"></i> Kopyala
-          </button>
-          <button onclick="sendToTvConverter()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition">
-            <i class="fa-solid fa-tv mr-1"></i> TV Formatına Aktar
-          </button>
-          <button onclick="exportDocx('news-raw-result', 'Kurumsal_Haber_Bulteni')" class="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition shadow-sm">
-            <i class="fa-solid fa-file-word mr-1"></i> Word (.docx) İndir
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200">
+          <div class="flex items-center gap-2">
+            <button onclick="copyToClipboard('news-raw-result', 'Haber Metni')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5">
+              <i class="fa-solid fa-copy"></i> Kopyala
+            </button>
+            <button onclick="exportDocx('news-raw-result', 'Kurumsal_Haber_Bulteni')" class="px-3.5 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+              <i class="fa-solid fa-file-word"></i> Word (.docx) İndir
+            </button>
+          </div>
+          
+          <!-- Sonraki Akış Adımı: Editoryal Denetime Gönder -->
+          <button onclick="sendToEditorialCheck()" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shadow-md flex items-center gap-2">
+            <span>3. Adım: Editoryal Denetime Gönder</span>
+            <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
@@ -616,16 +622,19 @@
 
         <!-- 2. KUTU: DÜZELTİLMİŞ NİHAİ HABER METNİ -->
         <div class="glass-card rounded-2xl p-6 space-y-3 border-2 border-emerald-300 bg-emerald-50/20">
-          <div class="flex items-center justify-between pb-2 border-b border-emerald-100">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-emerald-100">
             <h3 class="font-bold text-emerald-950 text-sm flex items-center gap-2">
               <i class="fa-solid fa-file-pen text-emerald-600"></i> 2. Düzeltilmiş ve Yayına Hazır Nihai Metin
             </h3>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <button onclick="copyToClipboard('editorial-edited-raw', 'Düzeltilmiş Metin')" class="px-3 py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold transition">
-                <i class="fa-solid fa-copy mr-1"></i> Metni Kopyala
+                <i class="fa-solid fa-copy mr-1"></i> Kopyala
               </button>
               <button onclick="exportDocx('editorial-edited-raw', 'Duzeltilmis_Nihai_Haber')" class="px-3.5 py-1.5 rounded-lg bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition shadow-sm">
                 <i class="fa-solid fa-file-word mr-1"></i> Word İndir
+              </button>
+              <button onclick="sendToTvFromEditorial()" class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+                <i class="fa-solid fa-tv"></i> 4. Adım: TV & Prompter'a Gönder
               </button>
             </div>
           </div>
@@ -645,6 +654,23 @@
           </div>
           <input type="hidden" id="editorial-changes-raw">
           <div id="editorial-changes-text" class="markdown-body text-sm text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 leading-relaxed"></div>
+        </div>
+
+        <!-- Alt Akış İlerleme Çubuğu -->
+        <div class="p-4 rounded-2xl bg-gradient-to-r from-sky-900 to-[#003366] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center text-xl">
+              <i class="fa-solid fa-tv"></i>
+            </div>
+            <div>
+              <div class="font-bold text-sm">Haber Denetlendi ve Yayına Hazır!</div>
+              <div class="text-xs text-sky-200">Düzeltilmiş bu metni televizyon bülteni formatına kısaltıp Prompter modunda seslendirin.</div>
+            </div>
+          </div>
+          <button onclick="sendToTvFromEditorial()" class="px-6 py-3 rounded-xl bg-[#00A3E0] hover:bg-[#0088ba] text-white font-bold text-xs shadow-md transition flex items-center gap-2 shrink-0">
+            <span>4. Adım: TV Bülteni & Prompter'a Aktar</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
         </div>
 
       </div>

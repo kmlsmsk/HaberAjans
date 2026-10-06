@@ -672,15 +672,32 @@ function sendToNewsWriter() {
   if (!audioText) return;
   document.getElementById('news-raw-text').value = audioText;
   switchView('news');
-  showToast('Deşifre metni Haber Yazarına aktarıldı.', 'success');
+  showToast('🎙️ 1. Adım ➔ Deşifre metni Haber Yazarına aktarıldı.', 'success');
 }
 
-function sendToTvConverter() {
+function sendToEditorialCheck() {
   const newsText = document.getElementById('news-raw-result').value;
-  if (!newsText) return;
-  document.getElementById('tv-raw-text').value = newsText;
+  if (!newsText) {
+    showToast('Lütfen önce bir haber oluşturun.', 'warning');
+    return;
+  }
+  document.getElementById('editorial-raw-text').value = newsText;
+  switchView('editorial');
+  showToast('📰 2. Adım ➔ Haber metni Editoryal Denetime aktarıldı.', 'success');
+}
+
+function sendToTvFromEditorial() {
+  const editedText = document.getElementById('editorial-edited-raw').value;
+  const originalText = document.getElementById('editorial-raw-text').value;
+  const targetText = (editedText && editedText.trim().length > 10) ? editedText : originalText;
+
+  if (!targetText) {
+    showToast('Aktarılacak haber metni bulunamadı.', 'warning');
+    return;
+  }
+  document.getElementById('tv-raw-text').value = targetText;
   switchView('tv');
-  showToast('Haber metni TV Bülten Modülüne aktarıldı.', 'success');
+  showToast('🔍 3. Adım ➔ Düzeltilmiş haber TV Bülteni & Prompter modülüne aktarıldı.', 'success');
 }
 
 // ---------------------------------------------------------
