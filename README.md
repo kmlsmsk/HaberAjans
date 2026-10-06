@@ -14,7 +14,7 @@
 
 2. **📰 Ege Ajans Haber Yazarı:**
    - Ham notlar, taslak metin, referans web bağlantısı ve fotoğraf/belge yükleme desteği (Multimodal).
-   - Ege Üniversitesi resmi basın bülteni formatına tam uyum (`İZMİR (Ege Ajans) -`, Rektör Prof. Dr. Musa ALCI demeci, 5N1K ve Ters Piramit kuralı).
+   - Ege Üniversitesi resmi basın bülteni formatına tam uyum (`İZMİR (Ege Ajans) -`, Rektör demeci, 5N1K ve Ters Piramit kuralı).
    - Tek tıkla haber oluşturma ve Word (.docx) raporu indirme.
 
 3. **📺 TV Haber Formatı & Teleprompter:**
@@ -79,4 +79,4 @@ git push -u origin main
 ## 👨‍💻 Künye
 - **Proje:** HaberCiM - Ege Ajans Akıllı Haber Platformu
 - **Geliştirici:** Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)
-- **Telif Hakları:** © 2026 Ege Üniversitesi Ege Ajans
+- **Telif Hakları:** © 2026
