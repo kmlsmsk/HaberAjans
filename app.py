@@ -16,6 +16,14 @@ import docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+# Google GenAI SDK
+try:
+    from google import genai
+    from google.genai import types
+    GENAI_SDK_AVAILABLE = True
+except ImportError:
+    GENAI_SDK_AVAILABLE = False
+
 # ---------------------------------------------------------
 # FASTAPI UYGULAMA YAPILANDIRMASI
 # ---------------------------------------------------------
@@ -42,6 +50,7 @@ templates = Jinja2Templates(directory="templates")
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_RECTOR = "Prof. Dr. Musa ALCI"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 FALLBACK_MODELS = [
     "gemini-2.5-flash",
@@ -59,53 +68,131 @@ MODEL_ALIASES = {
 }
 
 # ---------------------------------------------------------
-# YARDIMCI GEMINI API FONKSİYONLARI
+# YARDIMCI GEMINI ÇAĞRI MOTORU (SDK + REST FALLBACK)
 # ---------------------------------------------------------
-def call_gemini_api(api_key: str, primary_model: str, payload: dict, clean_stars: bool = False) -> dict:
-    if not api_key:
+def execute_gemini_call(
+    api_key: str,
+    model: str = DEFAULT_MODEL,
+    prompt: str = "",
+    system_prompt: Optional[str] = None,
+    image_base64: Optional[str] = None,
+    image_mime: Optional[str] = None,
+    audio_bytes: Optional[bytes] = None,
+    audio_mime: Optional[str] = None,
+    temperature: float = 0.5,
+    clean_stars: bool = False
+) -> dict:
+    if not api_key or not api_key.strip():
         return {"success": False, "error": "API Anahtarı bulunamadı. Lütfen Ayarlar sekmesinden Gemini API anahtarınızı girin."}
 
-    # Eski / kullanımdan kalkan modelleri otomatik en güncele yönlendir
-    mapped_primary = MODEL_ALIASES.get(primary_model, primary_model)
-    
-    models_to_try = [mapped_primary]
-    if primary_model != mapped_primary:
-        models_to_try.append(primary_model)
-    for m in FALLBACK_MODELS:
-        if m not in models_to_try:
-            models_to_try.append(m)
+    user_api_key = api_key.strip()
+    primary_model = (model or DEFAULT_MODEL).strip()
+    # Alias kontrolü
+    primary_model = MODEL_ALIASES.get(primary_model, primary_model)
+
+    models_to_try = [primary_model]
+    for fb in FALLBACK_MODELS:
+        if fb not in models_to_try:
+            models_to_try.append(fb)
 
     last_error = ""
 
-    for model in models_to_try:
-        try:
-            url = f"{GEMINI_BASE_URL}/models/{model}:generateContent?key={api_key.strip()}"
-            response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=90)
-            
-            if response.status_code == 200:
-                data = response.json()
-                candidates = data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts:
-                        text = parts[0].get("text", "")
-                        if clean_stars:
-                            text = text.replace("**", "").replace("*", "")
-                        return {
-                            "success": True,
-                            "text": text.strip(),
-                            "used_model": model
-                        }
-                last_error = f"{model}: Modelden boş içerik döndü."
-            else:
-                try:
-                    err_json = response.json()
-                    msg = err_json.get("error", {}).get("message", f"HTTP {response.status_code}")
-                    last_error = f"{model}: {msg}"
-                except Exception:
-                    last_error = f"{model}: HTTP {response.status_code} - {response.text[:200]}"
-        except Exception as e:
-            last_error = f"{model}: {str(e)}"
+    for target_model in models_to_try:
+        # 1. YÖNTEM: Google GenAI Resmi SDK İstemcisi
+        if GENAI_SDK_AVAILABLE:
+            try:
+                client = genai.Client(api_key=user_api_key)
+                contents = []
+
+                if audio_bytes and audio_mime:
+                    contents.append(types.Part.from_bytes(data=audio_bytes, mime_type=audio_mime))
+
+                if image_base64 and image_mime:
+                    clean_b64 = image_base64.split(",")[1] if "," in image_base64 else image_base64
+                    img_raw = base64.b64decode(clean_b64)
+                    contents.append(types.Part.from_bytes(data=img_raw, mime_type=image_mime))
+
+                if prompt:
+                    contents.append(prompt)
+
+                config_args = {"temperature": temperature}
+                if system_prompt:
+                    config_args["system_instruction"] = system_prompt
+
+                config = types.GenerateContentConfig(**config_args)
+
+                response = client.models.generate_content(
+                    model=target_model,
+                    contents=contents,
+                    config=config
+                )
+
+                if response and response.text:
+                    res_text = response.text.strip()
+                    if clean_stars:
+                        res_text = res_text.replace("**", "").replace("*", "")
+                    return {
+                        "success": True,
+                        "text": res_text,
+                        "used_model": target_model
+                    }
+            except Exception as sdk_e:
+                last_error = f"{target_model} (SDK): {str(sdk_e)}"
+
+        # 2. YÖNTEM: REST API Fallback (v1beta & v1)
+        rest_parts = []
+        if audio_bytes and audio_mime:
+            rest_parts.append({
+                "inlineData": {
+                    "mimeType": audio_mime,
+                    "data": base64.b64encode(audio_bytes).decode("utf-8")
+                }
+            })
+        if image_base64 and image_mime:
+            clean_b64 = image_base64.split(",")[1] if "," in image_base64 else image_base64
+            rest_parts.append({
+                "inlineData": {
+                    "mimeType": image_mime,
+                    "data": clean_b64
+                }
+            })
+        if prompt:
+            rest_parts.append({"text": prompt})
+
+        rest_payload = {
+            "contents": [{"parts": rest_parts}],
+            "generationConfig": {"temperature": temperature}
+        }
+        if system_prompt:
+            rest_payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+
+        for ver in ["v1beta", "v1"]:
+            try:
+                url = f"https://generativelanguage.googleapis.com/{ver}/models/{target_model}:generateContent?key={user_api_key}"
+                res = requests.post(url, json=rest_payload, headers={"Content-Type": "application/json"}, timeout=90)
+                if res.status_code == 200:
+                    data = res.json()
+                    cand = data.get("candidates", [])
+                    if cand:
+                        parts = cand[0].get("content", {}).get("parts", [])
+                        if parts:
+                            text = parts[0].get("text", "").strip()
+                            if clean_stars:
+                                text = text.replace("**", "").replace("*", "")
+                            return {
+                                "success": True,
+                                "text": text,
+                                "used_model": target_model
+                            }
+                else:
+                    try:
+                        err_data = res.json()
+                        err_msg = err_data.get("error", {}).get("message", f"HTTP {res.status_code}")
+                        last_error = f"{target_model}: {err_msg}"
+                    except Exception:
+                        last_error = f"{target_model}: HTTP {res.status_code}"
+            except Exception as req_e:
+                last_error = f"{target_model}: {str(req_e)}"
 
     return {"success": False, "error": f"Gemini API çağrısı başarısız oldu:\n{last_error}"}
 
@@ -173,38 +260,49 @@ def create_word_document(title: str, content: str, is_tv_format: bool = False) -
             r.font.size = Pt(12)
             r.font.bold = True
             h.paragraph_format.space_after = Pt(4)
-        elif line_clean.startswith('**') and line_clean.endsWith('**') and len(line_clean) > 4:
+        elif line_clean.startswith('**') and line_clean.endswith('**') and len(line_clean) > 4:
             p = doc.add_paragraph()
             r = p.add_run(line_clean[2:-2].strip())
             r.font.name = 'Times New Roman'
             r.font.size = Pt(12)
             r.font.bold = True
-            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY if not is_tv_format else WD_ALIGN_PARAGRAPH.LEFT
-            p.paragraph_format.space_after = Pt(8)
+            p.paragraph_format.space_after = Pt(6)
         else:
             p = doc.add_paragraph()
-            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY if not is_tv_format else WD_ALIGN_PARAGRAPH.LEFT
-            p.paragraph_format.space_after = Pt(6)
+            p.paragraph_format.space_after = Pt(8)
+            p.paragraph_format.line_spacing = 1.15
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
-            # Markdown **kalın** etiketlerini parse et
             parts = re.split(r'(\*\*.*?\*\*)', line_clean)
             for part in parts:
-                if part.startswith('**') and part.endsWith('**') and len(part) > 4:
+                if part.startswith('**') and part.endswith('**') and len(part) > 4:
                     r = p.add_run(part[2:-2])
                     r.font.name = 'Times New Roman'
+                    r.font.size = Pt(12)
                     r.font.bold = True
                 else:
                     r = p.add_run(part)
                     r.font.name = 'Times New Roman'
+                    r.font.size = Pt(12)
 
-    # Geçici dosyaya kaydet
-    safe_title = re.sub(r'[\\/*?:"<>|]', '', title).replace(' ', '_').lower()[:35] or "habercim_belge"
-    tmp_path = os.path.join(tempfile.gettempdir(), f"{safe_title}.docx")
-    doc.save(tmp_path)
-    return tmp_path
+    # İmzayı Ekle (Alt Bilgi / Kapanış)
+    doc.add_paragraph()
+    p_footer = doc.add_paragraph()
+    p_footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r_foot = p_footer.add_run("Ege Üniversitesi Ege Ajans • HaberCiM Platformu\nGeliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)")
+    r_foot.font.name = 'Times New Roman'
+    r_foot.font.size = Pt(9)
+    r_foot.font.italic = True
+    r_foot.font.color.rgb = RGBColor(0x70, 0x80, 0x90)
+
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
+    tmp_file.close()
+    doc.save(tmp_file.name)
+    return tmp_file.name
+
 
 # ---------------------------------------------------------
-# PYDANTIC İSTEK MODELLERİ
+# PYDANTIC MODELLERİ
 # ---------------------------------------------------------
 class ApiKeyValidateRequest(BaseModel):
     api_key: str
@@ -214,7 +312,7 @@ class NewsGenerateRequest(BaseModel):
     raw_text: str
     reference_url: Optional[str] = None
     rector_name: Optional[str] = DEFAULT_RECTOR
-    model: Optional[str] = "gemini-2.5-flash"
+    model: Optional[str] = DEFAULT_MODEL
     image_base64: Optional[str] = None
     image_mime_type: Optional[str] = None
 
@@ -222,13 +320,13 @@ class TvConvertRequest(BaseModel):
     api_key: str
     news_text: str
     has_video: bool = True
-    model: Optional[str] = "gemini-2.5-flash"
+    model: Optional[str] = DEFAULT_MODEL
 
 class EditorialCheckRequest(BaseModel):
     api_key: str
     news_text: str
     rector_name: Optional[str] = DEFAULT_RECTOR
-    model: Optional[str] = "gemini-3.1-pro-preview"
+    model: Optional[str] = DEFAULT_MODEL
 
 class DocxExportRequest(BaseModel):
     title: str
@@ -260,6 +358,7 @@ async def health_check():
         "status": "online",
         "app": "HaberCiM - Ege Ajans AI Asistanı",
         "developer": "Dr. Kemal ŞİMŞEK - Bilgisayar Mühendisi",
+        "default_model": DEFAULT_MODEL,
         "version": "1.0.0"
     }
 
@@ -294,7 +393,7 @@ async def fetch_remote_models(req: ApiKeyValidateRequest):
 @app.post("/api/transcribe-audio")
 async def transcribe_audio(
     api_key: str = Form(...),
-    model: str = Form("gemini-2.5-flash"),
+    model: str = Form(DEFAULT_MODEL),
     audio_file: Optional[UploadFile] = File(None),
     audio_base64: Optional[str] = Form(None),
     mime_type: Optional[str] = Form("audio/mp4")
@@ -323,33 +422,15 @@ Kurallar:
     if not raw_bytes:
         raise HTTPException(status_code=400, detail="Ses verisi bulunamadı.")
 
-    base64_data = base64.b64encode(raw_bytes).decode("utf-8")
-
-    payload = {
-        "systemInstruction": {
-            "parts": [{"text": system_prompt}]
-        },
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "inlineData": {
-                            "mimeType": final_mime,
-                            "data": base64_data
-                        }
-                    },
-                    {
-                        "text": "Lütfen bu ses kaydını yukarıdaki kurallara göre harfiyen çözümle ve mantıksal paragraflar halinde yaz."
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.2
-        }
-    }
-
-    result = call_gemini_api(api_key=api_key, primary_model=model, payload=payload)
+    result = execute_gemini_call(
+        api_key=api_key,
+        model=model or DEFAULT_MODEL,
+        prompt="Lütfen bu ses kaydını yukarıdaki kurallara göre harfiyen çözümle ve mantıksal paragraflar halinde yaz.",
+        system_prompt=system_prompt,
+        audio_bytes=raw_bytes,
+        audio_mime=final_mime,
+        temperature=0.2
+    )
     return result
 
 @app.post("/api/generate-news")
@@ -377,23 +458,14 @@ Girdi Bilgileri:
 Ham Metin / Etkinlik Notları: {req.raw_text}
 Referans / Kaynak Bağlantı: {req.reference_url or "Belirtilmedi"}
 """
-    parts = [{"text": prompt}]
-
-    if req.image_base64 and req.image_mime_type:
-        clean_b64 = req.image_base64.split(",")[1] if "," in req.image_base64 else req.image_base64
-        parts.append({
-            "inlineData": {
-                "mimeType": req.image_mime_type,
-                "data": clean_b64
-            }
-        })
-
-    payload = {
-        "contents": [{"parts": parts}],
-        "generationConfig": {"temperature": 0.65}
-    }
-
-    result = call_gemini_api(api_key=req.api_key, primary_model=req.model or "gemini-2.5-flash", payload=payload)
+    result = execute_gemini_call(
+        api_key=req.api_key,
+        model=req.model or DEFAULT_MODEL,
+        prompt=prompt,
+        image_base64=req.image_base64,
+        image_mime=req.image_mime_type,
+        temperature=0.65
+    )
     return result
 
 @app.post("/api/convert-tv")
@@ -431,12 +503,13 @@ Haber Metni:
 {req.news_text}
 ---
 """
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.3}
-    }
-
-    result = call_gemini_api(api_key=req.api_key, primary_model=req.model or "gemini-2.5-flash", payload=payload, clean_stars=True)
+    result = execute_gemini_call(
+        api_key=req.api_key,
+        model=req.model or DEFAULT_MODEL,
+        prompt=prompt,
+        temperature=0.3,
+        clean_stars=True
+    )
     return result
 
 @app.post("/api/check-editorial")
@@ -481,12 +554,12 @@ Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 {req.news_text}
 ---
 """
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2}
-    }
-
-    result = call_gemini_api(api_key=req.api_key, primary_model=req.model or "gemini-3.1-pro-preview", payload=payload)
+    result = execute_gemini_call(
+        api_key=req.api_key,
+        model=req.model or DEFAULT_MODEL,
+        prompt=prompt,
+        temperature=0.2
+    )
     
     if result.get("success"):
         raw_text = result.get("text", "")

@@ -5,20 +5,19 @@
 
 // Varsayılan Model Listesi (Google Gemini Resmi API Modelleri)
 const DEFAULT_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Hızlı, stabil ve yüksek doğruluklu haber modeli (Önerilen)', isCustom: false },
-  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', desc: 'En gelişmiş editoryal denetim ve derin muhakeme', isCustom: false },
-  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', desc: 'Ultra hızlı ve yeni nesil zeka modeli', isCustom: false },
-  { id: 'gemini-3.8-live', name: 'Gemini 3.8 Live', desc: 'Gerçek zamanlı dinamik ses/metin akış modeli', isCustom: false },
-  { id: 'gemini-3.8-live-extended-thinking', name: 'Gemini 3.8 Live (Extended Thinking)', desc: 'Genişletilmiş akıl yürütme ve derin analiz', isCustom: false },
-  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', desc: 'Yeni nesil multimodal ve ses önizleme modeli', isCustom: false },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Hızlı, doğru ve güçlü model (Varsayılan & Önerilen)', isCustom: false },
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', desc: 'Yeni nesil ultra hızlı model', isCustom: false },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', desc: 'Gelişmiş editoryal denetim ve muhakeme', isCustom: false },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', desc: 'Multimodal ve ses önizleme modeli', isCustom: false },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Hızlı ve kararlı temel üretim modeli', isCustom: false },
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', desc: 'Geniş bağlam ve güvenilir ses çözümleme', isCustom: false }
+  { id: 'gemini-3.8-live', name: 'Gemini 3.8 Live', desc: 'Canlı akış ve ses/metin modeli', isCustom: false },
+  { id: 'gemini-3.8-live-extended-thinking', name: 'Gemini 3.8 Live (Extended Thinking)', desc: 'Genişletilmiş düşünce ve analiz', isCustom: false }
 ];
 
-// Model İsim Göçü (Eski/Kullanımdan kalkan modelleri otomatik güncelle)
+// Model İsim Kontrolü & Temizleme
 function sanitizeModelId(modelId) {
   if (!modelId) return 'gemini-2.5-flash';
-  if (modelId === 'gemini-2.5-pro' || modelId === 'gemini-1.5-pro') return 'gemini-3.1-pro-preview';
+  if (modelId === 'gemini-2.5-pro' || modelId === 'gemini-1.5-pro' || modelId === 'gemini-1.5-flash') return 'gemini-2.5-flash';
   if (modelId === 'gemini-pro') return 'gemini-2.5-flash';
   return modelId;
 }
@@ -40,7 +39,7 @@ const AppState = {
     audio: sanitizeModelId(storedModuleModels.audio || 'gemini-2.5-flash'),
     news: sanitizeModelId(storedModuleModels.news || 'gemini-2.5-flash'),
     tv: sanitizeModelId(storedModuleModels.tv || 'gemini-2.5-flash'),
-    editorial: sanitizeModelId(storedModuleModels.editorial || 'gemini-3.1-pro-preview')
+    editorial: sanitizeModelId(storedModuleModels.editorial || 'gemini-2.5-flash')
   },
   currentView: 'dashboard',
   recording: {
