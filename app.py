@@ -28,7 +28,7 @@ except ImportError:
 # FASTAPI UYGULAMA YAPILANDIRMASI
 # ---------------------------------------------------------
 app = FastAPI(
-    title="HaberCiM - Ege Ajans AI Medya Asistanı",
+    title="HaberCiM - Akıllı Haber Üretim & AI Medya Asistanı",
     description="Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)",
     version="1.0.0"
 )
@@ -48,8 +48,12 @@ os.makedirs("templates", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_RECTOR = "Prof. Dr. Musa ALCI"
+# Varsayılan Anonim Kurumsal Parametreler
+DEFAULT_UNIVERSITY = "XXXX Üniversitesi"
+DEFAULT_AGENCY = "XXX Ajans"
+DEFAULT_RECTOR = "Prof. Dr. XXXX YYYY"
+DEFAULT_CITY = "İZMİR"
+DEFAULT_PORTAL = "www.xxxajans.com"
 DEFAULT_MODEL = "gemini-2.5-flash"
 
 FALLBACK_MODELS = [
@@ -206,7 +210,13 @@ def execute_gemini_call(
     return {"success": False, "error": f"Gemini API çağrısı başarısız oldu:\n{last_error}"}
 
 
-def create_word_document(title: str, content: str, is_tv_format: bool = False) -> str:
+def create_word_document(
+    title: str,
+    content: str,
+    is_tv_format: bool = False,
+    university_name: str = DEFAULT_UNIVERSITY,
+    agency_name: str = DEFAULT_AGENCY
+) -> str:
     """Standart Microsoft Word (.docx) belgesi üretir."""
     doc = docx.Document()
 
@@ -222,7 +232,7 @@ def create_word_document(title: str, content: str, is_tv_format: bool = False) -
     core_props.title = title
     core_props.author = "Dr. Kemal ŞİMŞEK - Bilgisayar Mühendisi"
     core_props.last_modified_by = "Dr. Kemal ŞİMŞEK - Bilgisayar Mühendisi"
-    core_props.comments = "HaberCiM - Ege Üniversitesi Ege Ajans AI Asistanı ile üretilmiştir."
+    core_props.comments = f"HaberCiM - {university_name} {agency_name} AI Asistanı ile üretilmiştir."
 
     # Normal Stil (Times New Roman 12 pt)
     style = doc.styles['Normal']
@@ -237,7 +247,7 @@ def create_word_document(title: str, content: str, is_tv_format: bool = False) -
         run.font.name = 'Times New Roman'
         run.font.size = Pt(16)
         run.font.bold = True
-        run.font.color.rgb = RGBColor(0x00, 0x33, 0x66) # Ege Navy
+        run.font.color.rgb = RGBColor(0x00, 0x33, 0x66)
         heading.paragraph_format.space_after = Pt(12)
 
     # Paragrafları İşleme
@@ -298,7 +308,7 @@ def create_word_document(title: str, content: str, is_tv_format: bool = False) -
     doc.add_paragraph()
     p_footer = doc.add_paragraph()
     p_footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    r_foot = p_footer.add_run("Ege Üniversitesi Ege Ajans • HaberCiM Platformu\nGeliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)")
+    r_foot = p_footer.add_run(f"{university_name} {agency_name} • HaberCiM Platformu\nGeliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)")
     r_foot.font.name = 'Times New Roman'
     r_foot.font.size = Pt(9)
     r_foot.font.italic = True
@@ -320,7 +330,11 @@ class NewsGenerateRequest(BaseModel):
     api_key: str
     raw_text: str
     reference_url: Optional[str] = None
+    university_name: Optional[str] = DEFAULT_UNIVERSITY
+    agency_name: Optional[str] = DEFAULT_AGENCY
     rector_name: Optional[str] = DEFAULT_RECTOR
+    city_name: Optional[str] = DEFAULT_CITY
+    portal_url: Optional[str] = DEFAULT_PORTAL
     model: Optional[str] = DEFAULT_MODEL
     image_base64: Optional[str] = None
     image_mime_type: Optional[str] = None
@@ -329,11 +343,17 @@ class TvConvertRequest(BaseModel):
     api_key: str
     news_text: str
     has_video: bool = True
+    is_phonetic: bool = False
+    university_name: Optional[str] = DEFAULT_UNIVERSITY
+    agency_name: Optional[str] = DEFAULT_AGENCY
+    rector_name: Optional[str] = DEFAULT_RECTOR
     model: Optional[str] = DEFAULT_MODEL
 
 class EditorialCheckRequest(BaseModel):
     api_key: str
     news_text: str
+    university_name: Optional[str] = DEFAULT_UNIVERSITY
+    agency_name: Optional[str] = DEFAULT_AGENCY
     rector_name: Optional[str] = DEFAULT_RECTOR
     model: Optional[str] = DEFAULT_MODEL
 
@@ -341,6 +361,8 @@ class DocxExportRequest(BaseModel):
     title: str
     content: str
     is_tv: bool = False
+    university_name: Optional[str] = DEFAULT_UNIVERSITY
+    agency_name: Optional[str] = DEFAULT_AGENCY
 
 # ---------------------------------------------------------
 # API ENDPOINT'LERİ
@@ -352,7 +374,7 @@ async def serve_home(request: Request):
     index_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path, media_type="text/html")
-    return HTMLResponse("<h1>HaberCiM - Ege Ajans AI Platformu</h1>")
+    return HTMLResponse("<h1>HaberCiM - AI Medya Platformu</h1>")
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -365,9 +387,11 @@ async def favicon():
 async def health_check():
     return {
         "status": "online",
-        "app": "HaberCiM - Ege Ajans AI Asistanı",
+        "app": "HaberCiM - AI Asistanı",
         "developer": "Dr. Kemal ŞİMŞEK - Bilgisayar Mühendisi",
         "default_model": DEFAULT_MODEL,
+        "default_university": DEFAULT_UNIVERSITY,
+        "default_rector": DEFAULT_RECTOR,
         "version": "1.0.0"
     }
 
@@ -448,20 +472,25 @@ Kurallar:
 
 @app.post("/api/generate-news")
 async def generate_news(req: NewsGenerateRequest):
+    uni = req.university_name or DEFAULT_UNIVERSITY
+    agency = req.agency_name or DEFAULT_AGENCY
     rector = req.rector_name or DEFAULT_RECTOR
-    prompt = f"""
-Sen Ege Üniversitesi Ege Ajans (euegeajans.com) Haber Merkezi'nin kıdemli başyazarı ve haber editörüsün.
-Görevin, sana sunulan ham notları, etkinlik bilgilerini ve (varsa) görseli kullanarak Ege Ajans'ın resmi ve saygın kurumsal yayın çizgisine tam uyumlu, kusursuz bir haber metni yazmaktır.
+    city = (req.city_name or DEFAULT_CITY).upper()
+    portal = req.portal_url or DEFAULT_PORTAL
 
-EGE AJANS KURUMSAL HABER FORMATI VE YAZIM STANDARTLARI:
+    prompt = f"""
+Sen {uni} {agency} ({portal}) Haber Merkezi'nin kıdemli başyazarı ve haber editörüsün.
+Görevin, sana sunulan ham notları, etkinlik bilgilerini ve (varsa) görseli kullanarak {uni} ve {agency}'ın resmi ve saygın kurumsal yayın çizgisine tam uyumlu, kusursuz bir haber metni yazmaktır.
+
+{agency.upper()} KURUMSAL HABER FORMATI VE YAZIM STANDARTLARI:
 1. Haber Mimarisi (Ters Piramit & 5N1K Kuralı):
-   - Başlık: '# ' ile başlayan, büyük ve çarpıcı haber başlığı. (Örn: # Ege Üniversitesinden Sürdürülebilir Bilim Atağı)
+   - Başlık: '# ' ile başlayan, büyük, dikkat çekici ve kurumsal haber başlığı. (Örn: # {uni}'nden Çığır Açan Bilimsel Proje)
    - Spot (Özet): '**' ile kalınlaştırılmış, haberin ana fikrini ve 5N1K unsurlarını özetleyen 1-2 cümlelik vurucu spot.
-   - Mahreç ve Giriş: Haber gövdesinin ilk paragrafı MUTLAKA "**İZMİR (Ege Ajans) -** " ifadesiyle başlamalıdır. Giriş cümlesinde etkinliğin nerede, ne zaman, kimlerin katılımıyla gerçekleştiği net aktarılmalıdır.
-   - Rektör / Yetkili Görüşü: Giriş paragrafını takiben, Ege Üniversitesi Rektörü {rector}'nın vizyoner açıklamalarına ve demeçlerine yer ver. Demeci tırnak içinde ("...") belirt ve cümlenin sonunu "... dedi", "... ifadelerini kullandı" veya "... şeklinde konuştu" ile bağla.
+   - Mahreç ve Giriş: Haber gövdesinin ilk paragrafı MUTLAKA "**{city} ({agency}) -** " ifadesiyle başlamalıdır. Giriş cümlesinde etkinliğin/gelişmenin nerede, ne zaman, kimlerin katılımıyla gerçekleştiği net aktarılmalıdır.
+   - Rektör / Yetkili Görüşü: Giriş paragrafını takiben, {uni} Rektörü {rector}'nın vizyoner açıklamalarına ve demeçlerine yer ver. Demeci tırnak içinde ("...") belirt ve cümlenin sonunu "... dedi", "... ifadelerini kullandı" veya "... şeklinde konuştu" ile bağla.
    - Ara Başlıklar: Konu akışını düzenleyen '## ' seviyesinde anlamlı ve kurumsal ara başlıklar kullan.
-   - İçerik Vurguları: Ege Üniversitesi'nin araştırma üniversitesi misyonu, TÜBİTAK/uluslararası başarıları, öğrenci odaklı yaklaşımı, akreditasyonları ve topluma hizmet ilkelerini kurumsal dille vurgula.
-   - Etiketler: En sonda '### Etiketler:' başlığı altında 4-6 adet hashtag ekle (Örn: #EgeÜniversitesi #EgeAjans #Bilim).
+   - İçerik Vurguları: {uni}'nin araştırma vizyonu, akademik ve bilimsel başarıları, öğrenci odaklı yaklaşımı, kalite akreditasyonları ve topluma hizmet ilkelerini kurumsal dille vurgula.
+   - Etiketler: En sonda '### Etiketler:' başlığı altında 4-6 adet hashtag ekle (Örn: #{uni.replace(' ', '')} #{agency.replace(' ', '')} #Bilim #Akademi).
 2. Dil ve Üslup:
    - Tarafsız, güvenilir, saygın, akıcı ve editoryal ajans dili.
    - Cümleler düşük olmamalı, TDK kurallarına tam uyumlu olmalıdır.
@@ -483,18 +512,32 @@ Referans / Kaynak Bağlantı: {req.reference_url or "Belirtilmedi"}
 
 @app.post("/api/convert-tv")
 async def convert_tv(req: TvConvertRequest):
+    uni = req.university_name or DEFAULT_UNIVERSITY
+    agency = req.agency_name or DEFAULT_AGENCY
+    rector = req.rector_name or DEFAULT_RECTOR
+
+    phonetic_rules = ""
+    if req.is_phonetic:
+        phonetic_rules = """
+ÖZEL SPİKER SESLENDİRME & FONETİK KURALLARI:
+- Metni stüdyo spikerinin canlı yayında takılmadan okuyabilmesi ve Web Seslendirme (TTS) motorunun doğru telaffuz edebilmesi için fonetikleştir.
+- Sayıları, yılları ve tarihleri mutlaka okunuşlarıyla yaz (Örn: "2026 yılında" yerine "iki bin yirmi altı yılında", "150 öğrenci" yerine "yüz elli öğrenci").
+- Kısaltmaların telaffuzunu açıkça yaz (Örn: "TÜBİTAK" -> "Tübitak", "AB" -> "Avrupa Birliği").
+- Spikerin nefes alacağı ve duraklayacağı yerlere eğik çizgi (" / ") işareti koy.
+"""
+
     if req.has_video:
-        video_instruction = """
+        video_instruction = f"""
 Haberde GÖRÜNTÜ / VTR / RÖPORTAJ MEVCUTTUR.
 Biçimlendirme Kuralları:
-1. KJ: Kısa, vurucu ve haberin özünü veren alt bant başlığı. (İlk satır 'KJ: ...' olmalıdır)
+1. KJ: Kısa, vurucu ve haberin özünü veren alt bant başlığı. (İlk satır 'KJ: ...' olmalıdır. Örn: KJ: {uni}'nde Büyük Başarı)
 2. CAM: Stüdyo spikerinin kameraya bakarak okuyacağı, izleyiciyi habere bağlayan 1-2 cümlelik dinamik giriş.
 3. SES: Görüntü (VTR) üzerine seslendirilecek 1-2 cümlelik dış ses metni.
-4. Video / Röportaj İbreleri: Haberdeki önemli kişilerin konuşma geçişleri (Örn: Prof. Dr. ... Video).
+4. Video / Röportaj İbreleri: Haberdeki önemli kişilerin konuşma geçişleri (Örn: {rector} Video).
 5. SES: VTR devamı dış ses kapanış cümlesi.
 """
     else:
-        video_instruction = """
+        video_instruction = f"""
 Haberde GÖRÜNTÜ / VİDEO / VTR BULUNMAMAKTADIR. (SADECE STÜDYO SPİKERİ OKUYACAK)
 Biçimlendirme Kuralları:
 1. KJ: Kısa, dikkat çekici alt yazı başlığı. (İlk satır 'KJ: ...' olmalıdır)
@@ -503,9 +546,11 @@ Biçimlendirme Kuralları:
 """
 
     prompt = f"""
-Sen usta bir TV haber editörü ve bülten koordinatörüsün. Sana verilen haber metnini televizyon haber bültenine uygun olarak **oldukça kısa, öz, vurucu ve net** bir şekilde yeniden yazmalısın.
+Sen {uni} {agency} TV Haber Masası'nın kıdemli bülten koordinatörü ve spiker editörüsün.
+Sana verilen haber metnini televizyon haber bültenine uygun olarak **oldukça kısa, öz, vurucu ve net** bir şekilde yeniden yazmalısın.
 
 {video_instruction}
+{phonetic_rules}
 
 ÖNEMLİ YAZIM KURALLARI:
 - **ASLA markdown kalınlaştırma (**) veya yıldız işaretleri kullanma**. Örneğin CAM: veya KJ: gibi ifadelerde yıldız (**) asla kullanma.
@@ -527,15 +572,18 @@ Haber Metni:
 
 @app.post("/api/check-editorial")
 async def check_editorial(req: EditorialCheckRequest):
+    uni = req.university_name or DEFAULT_UNIVERSITY
+    agency = req.agency_name or DEFAULT_AGENCY
     rector = req.rector_name or DEFAULT_RECTOR
+
     prompt = f"""
-Sen Ege Üniversitesi Ege Ajans Yayın Denetleme Kurulu Başkanı ve Baş Editörüsün.
+Sen {uni} {agency} Yayın Denetleme Kurulu Başkanı ve Baş Editörüsün.
 Sana verilen haber metnini titizlikle incele ve 3 ana bölüme ayırarak değerlendir.
 
 Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 
 === RAPOR_BASLANGIC ===
-# 📊 Ege Ajans Editoryal Değerlendirme Raporu
+# 📊 {agency} Editoryal Değerlendirme Raporu
 
 ### 🎯 Genel Editoryal Puan: [100 üzerinden puan]/100
 ### 📋 5N1K Kontrol Karnesi
@@ -548,7 +596,7 @@ Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 
 ### 🔍 TDK İmla ve Kurumsal Dil Denetimi
 - İmla & Noktalama Durumu: [Değerlendirme]
-- Ege Ajans Format Uyumu: [İzmir (Ege Ajans)- girişi, Rektör {rector} demeci ve tırnak alıntıları uyumu]
+- {agency} Format Uyumu: [Mahreç girişi, Rektör {rector} demeci ve tırnak alıntıları uyumu]
 === RAPOR_BITIS ===
 
 === DEGISIKLIKLER_BASLANGIC ===
@@ -559,7 +607,7 @@ Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 === DEGISIKLIKLER_BITIS ===
 
 === DUZELTILMIS_METIN_BASLANGIC ===
-[Buraya haberin başlığı (# Başlık), spotu (**Spot**) ve Ege Ajans standartlarına göre sıfır hatayla yeniden yazılmış, kusursuz ve yayınlanmaya hazır nihai haber metnini yerleştir.]
+[Buraya haberin başlığı (# Başlık), spotu (**Spot**) ve {agency} standartlarına göre sıfır hatayla yeniden yazılmış, kusursuz ve yayınlanmaya hazır nihai haber metnini yerleştir.]
 === DUZELTILMIS_METIN_BITIS ===
 
 İncelenecek Haber Metni:
@@ -597,7 +645,13 @@ Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 @app.post("/api/export-docx")
 async def export_docx(req: DocxExportRequest):
     try:
-        file_path = create_word_document(title=req.title, content=req.content, is_tv_format=req.is_tv)
+        file_path = create_word_document(
+            title=req.title,
+            content=req.content,
+            is_tv_format=req.is_tv,
+            university_name=req.university_name or DEFAULT_UNIVERSITY,
+            agency_name=req.agency_name or DEFAULT_AGENCY
+        )
         filename = os.path.basename(file_path)
         return FileResponse(
             path=file_path,

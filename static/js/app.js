@@ -1,5 +1,5 @@
 /**
- * HaberCiM - Ege Ajans AI Medya Asistanı Web Client
+ * HaberCiM - Akıllı Haber Üretim & AI Medya Asistanı Web Client
  * Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)
  */
 
@@ -14,12 +14,12 @@ const DEFAULT_MODELS = [
   { id: 'gemini-3.8-live-extended-thinking', name: 'Gemini 3.8 Live (Extended Thinking)', desc: 'Genişletilmiş düşünce ve analiz', isCustom: false }
 ];
 
-// Model İsim Kontrolü & Temizleme
+// Model İsim Kontrolü
 function sanitizeModelId(modelId) {
   if (!modelId) return 'gemini-2.5-flash';
   if (modelId === 'gemini-2.5-pro' || modelId === 'gemini-1.5-pro' || modelId === 'gemini-1.5-flash') return 'gemini-2.5-flash';
   if (modelId === 'gemini-pro') return 'gemini-2.5-flash';
-  return modelId;
+  return modelId.replace('models/', '').trim();
 }
 
 let storedModuleModels = {};
@@ -32,7 +32,11 @@ try {
 // Uygulama Durumu (State)
 const AppState = {
   apiKey: localStorage.getItem('habercim_api_key') || '',
-  rectorName: localStorage.getItem('habercim_rector_name') || 'Prof. Dr. Musa ALCI',
+  universityName: localStorage.getItem('habercim_university_name') || 'XXXX Üniversitesi',
+  agencyName: localStorage.getItem('habercim_agency_name') || 'XXX Ajans',
+  rectorName: localStorage.getItem('habercim_rector_name') || 'Prof. Dr. XXXX YYYY',
+  cityName: localStorage.getItem('habercim_city_name') || 'İZMİR',
+  portalUrl: localStorage.getItem('habercim_portal_url') || 'www.xxxajans.com',
   models: DEFAULT_MODELS,
   moduleModels: {
     global: sanitizeModelId(storedModuleModels.global || 'gemini-2.5-flash'),
@@ -61,7 +65,12 @@ const AppState = {
     scrollInterval: null,
     countdown: 0,
     text: '',
-    title: ''
+    title: '',
+    ttsRate: 1.0,
+    ttsPitch: 1.0,
+    ttsVolume: 1.0,
+    selectedVoiceURI: null,
+    availableVoices: []
   }
 };
 
@@ -72,15 +81,29 @@ document.addEventListener('DOMContentLoaded', () => {
   checkApiKeyStatus();
   renderModelDropdowns();
   renderModelManagementList();
+  initTtsVoices();
 });
 
-// UI Başlatma
+// UI Başlatma ve Dinamik Parametreleri Yerleştirme
 function initUI() {
+  // Kurumsal Parametreleri Ekrana Yaz
+  document.getElementById('nav-agency-badge').innerText = AppState.agencyName;
+  document.getElementById('nav-university-sub').innerText = `${AppState.universityName} Medya Masası`;
+  document.getElementById('hero-university-badge').innerText = `${AppState.universityName} • ${AppState.agencyName}`;
+  document.getElementById('dash-university-name').innerText = AppState.universityName;
   document.getElementById('rector-name-display').innerText = AppState.rectorName;
-  document.getElementById('settings-rector-name').value = AppState.rectorName;
+  document.getElementById('footer-inst-text').innerText = `${AppState.universityName} • ${AppState.agencyName}`;
+
+  // Ayarlar Form Alanlarını Doldur
   document.getElementById('settings-api-key').value = AppState.apiKey;
-  
-  if (AppState.apiKey) {
+  document.getElementById('settings-university-name').value = AppState.universityName;
+  document.getElementById('settings-agency-name').value = AppState.agencyName;
+  document.getElementById('settings-rector-name').value = AppState.rectorName;
+  document.getElementById('settings-city-name').value = AppState.cityName;
+  document.getElementById('settings-portal-url').value = AppState.portalUrl;
+
+  // Banner Durumu
+  if (AppState.apiKey && AppState.apiKey.trim().length > 5) {
     document.getElementById('api-key-banner').classList.add('hidden');
   } else {
     document.getElementById('api-key-banner').classList.remove('hidden');
@@ -235,12 +258,13 @@ function saveModelFromModal() {
     return;
   }
 
-  const idx = AppState.models.findIndex(m => m.id === id);
+  const cleanId = id.replace('models/', '').trim();
+  const idx = AppState.models.findIndex(m => m.id === cleanId);
   if (idx >= 0) {
     AppState.models[idx] = { ...AppState.models[idx], name, desc };
     showToast(`'${name}' modeli güncellendi.`, 'success');
   } else {
-    AppState.models.push({ id, name, desc, isCustom: true });
+    AppState.models.push({ id: cleanId, name, desc, isCustom: true });
     showToast(`'${name}' modeli eklendi.`, 'success');
   }
 
@@ -295,10 +319,11 @@ async function fetchRemoteModels() {
     if (data.success && data.models) {
       let added = 0;
       data.models.forEach(mId => {
-        if (!AppState.models.some(m => m.id === mId)) {
+        const cleanM = mId.replace('models/', '').trim();
+        if (!AppState.models.some(m => m.id === cleanM)) {
           AppState.models.push({
-            id: mId,
-            name: mId.replace(/-/g, ' ').toUpperCase(),
+            id: cleanM,
+            name: cleanM.replace(/-/g, ' ').toUpperCase(),
             desc: 'Google API üzerinden otomatik eklendi',
             isCustom: true
           });
@@ -325,10 +350,18 @@ async function fetchRemoteModels() {
 // ---------------------------------------------------------
 async function saveSettings() {
   const key = document.getElementById('settings-api-key').value.trim();
-  const rector = document.getElementById('settings-rector-name').value.trim();
+  const uni = document.getElementById('settings-university-name').value.trim() || 'XXXX Üniversitesi';
+  const agency = document.getElementById('settings-agency-name').value.trim() || 'XXX Ajans';
+  const rector = document.getElementById('settings-rector-name').value.trim() || 'Prof. Dr. XXXX YYYY';
+  const city = document.getElementById('settings-city-name').value.trim() || 'İZMİR';
+  const portal = document.getElementById('settings-portal-url').value.trim() || 'www.xxxajans.com';
 
   AppState.apiKey = key;
-  AppState.rectorName = rector || 'Prof. Dr. Musa ALCI';
+  AppState.universityName = uni;
+  AppState.agencyName = agency;
+  AppState.rectorName = rector;
+  AppState.cityName = city;
+  AppState.portalUrl = portal;
 
   AppState.moduleModels = {
     global: document.getElementById('settings-global-model').value,
@@ -339,13 +372,16 @@ async function saveSettings() {
   };
 
   localStorage.setItem('habercim_api_key', AppState.apiKey);
+  localStorage.setItem('habercim_university_name', AppState.universityName);
+  localStorage.setItem('habercim_agency_name', AppState.agencyName);
   localStorage.setItem('habercim_rector_name', AppState.rectorName);
+  localStorage.setItem('habercim_city_name', AppState.cityName);
+  localStorage.setItem('habercim_portal_url', AppState.portalUrl);
   localStorage.setItem('habercim_module_models', JSON.stringify(AppState.moduleModels));
 
-  document.getElementById('rector-name-display').innerText = AppState.rectorName;
-  checkApiKeyStatus();
+  initUI();
   renderModelDropdowns();
-  showToast('Tüm ayarlar başarıyla kaydedildi!', 'success');
+  showToast('Tüm kurumsal parametreler ve ayarlar kaydedildi!', 'success');
 }
 
 async function testApiKey() {
@@ -431,19 +467,19 @@ async function toggleLiveRecording() {
       AppState.recording.isRecording = true;
 
       btn.classList.remove('bg-[#003366]');
-      btn.classList.add('recording-pulse', 'bg-red-600');
+      btn.classList.add('bg-red-600', 'recording-pulse');
       btn.innerHTML = '<i class="fa-solid fa-stop text-3xl text-white"></i>';
-      statusText.innerText = 'Kayıt Yapılıyor... (Durdurmak için dokunun)';
+      statusText.innerText = 'Canlı Ses Kaydediliyor (Durdurmak için dokunun)...';
 
       AppState.recording.timerInterval = setInterval(() => {
         AppState.recording.seconds++;
-        const mins = Math.floor(AppState.recording.seconds / 60).toString().padStart(2, '0');
-        const secs = (AppState.recording.seconds % 60).toString().padStart(2, '0');
+        const mins = String(Math.floor(AppState.recording.seconds / 60)).padStart(2, '0');
+        const secs = String(AppState.recording.seconds % 60).padStart(2, '0');
         timerText.innerText = `${mins}:${secs}`;
       }, 1000);
 
     } catch (err) {
-      showToast('Mikrofon erişim izni alınamadı: ' + err.message, 'error');
+      showToast(`Mikrofon erişim hatası: ${err.message}`, 'error');
     }
   }
 }
@@ -465,16 +501,19 @@ function handleAudioFileUpload(e) {
   reader.onloadend = () => {
     AppState.recording.audioBase64 = reader.result;
   };
+
+  showToast(`'${file.name}' ses dosyası yüklendi.`, 'success');
 }
 
 function clearRecordedAudio() {
   AppState.recording.audioBlob = null;
   AppState.recording.audioBase64 = null;
-  document.getElementById('audio-preview-container').classList.add('hidden');
   document.getElementById('audio-playback').src = '';
+  document.getElementById('audio-preview-container').classList.add('hidden');
   document.getElementById('audio-file-input').value = '';
   document.getElementById('record-timer').innerText = '00:00';
   document.getElementById('record-status').innerText = 'Canlı Kayıt İçin Dokunun';
+  showToast('Ses temizlendi.', 'info');
 }
 
 async function processAudioTranscription() {
@@ -484,18 +523,18 @@ async function processAudioTranscription() {
     return;
   }
 
-  if (!AppState.recording.audioBase64 && !AppState.recording.audioBlob) {
-    showToast('Lütfen önce bir ses kaydedin veya ses dosyası yükleyin.', 'warning');
+  if (!AppState.recording.audioBase64) {
+    showToast('Lütfen önce canlı ses kaydedin veya bir ses dosyası yükleyin.', 'warning');
     return;
   }
 
+  const model = document.getElementById('audio-model-select').value;
   const btn = document.getElementById('btn-process-audio');
   const resultContainer = document.getElementById('audio-result-container');
   const resultText = document.getElementById('audio-result-text');
-  const model = document.getElementById('audio-model-select').value;
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gemini AI Sesi Çözümlüyor...';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yapay Zeka Çözümlüyor...';
   resultContainer.classList.add('hidden');
 
   try {
@@ -534,9 +573,9 @@ async function processAudioTranscription() {
 // ---------------------------------------------------------
 function applyNewsTemplate(type) {
   const templates = {
-    tubitak: 'Ege Üniversitesi Fen Fakültesi Kimya Bölümü öğretim üyelerinin hazırladığı kanser araştırmaları projesi TÜBİTAK 1001 programı kapsamında 3.5 milyon TL destek almaya hak kazandı.',
-    akademik: 'Ege Üniversitesi MÖTBE Kültür Merkezinde 2026-2027 Akademik Yılı Açılış Töreni gerçekleştirildi. Törende araştırma üniversitesi hedefleri ve yeni projeler paylaşıldı.',
-    green: 'Ege Üniversitesi, GreenMetric dünya yeşil kampüs sıralamasında Türkiye birinciliğini korudu. Güneş enerjisi ve sıfır atık projeleri sergilendi.'
+    tubitak: `${AppState.universityName} Kimya Bölümü öğretim üyelerinin hazırladığı kanser araştırmaları projesi TÜBİTAK 1001 programı kapsamında 3.5 milyon TL destek almaya hak kazandı.`,
+    akademik: `${AppState.universityName} Kültür Merkezinde 2026-2027 Akademik Yılı Açılış Töreni gerçekleştirildi. Törende araştırma üniversitesi hedefleri ve yeni projeler paylaşıldı.`,
+    green: `${AppState.universityName}, GreenMetric dünya yeşil kampüs sıralamasında derecesini korudu. Güneş enerjisi ve sıfır atık projeleri sergilendi.`
   };
 
   if (templates[type]) {
@@ -587,7 +626,7 @@ async function generateNews() {
   const resultText = document.getElementById('news-result-text');
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ege Ajans Formatında Yazılıyor...';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kurumsal Formatta Yazılıyor...';
   resultContainer.classList.add('hidden');
 
   try {
@@ -598,7 +637,11 @@ async function generateNews() {
         api_key: AppState.apiKey,
         raw_text: rawText,
         reference_url: url,
+        university_name: AppState.universityName,
+        agency_name: AppState.agencyName,
         rector_name: AppState.rectorName,
+        city_name: AppState.cityName,
+        portal_url: AppState.portalUrl,
         model: model,
         image_base64: window._newsImageBase64 || null,
         image_mime_type: window._newsImageMime || null
@@ -611,7 +654,7 @@ async function generateNews() {
       document.getElementById('news-raw-result').value = data.text;
       document.getElementById('news-used-model').innerText = `Model: ${data.used_model}`;
       resultContainer.classList.remove('hidden');
-      showToast('Ege Ajans kurumsal haberi hazırlandı!', 'success');
+      showToast('Kurumsal haber başarıyla hazırlandı!', 'success');
       resultContainer.scrollIntoView({ behavior: 'smooth' });
     } else {
       showToast(data.error || 'Haber üretilemedi.', 'error');
@@ -620,12 +663,28 @@ async function generateNews() {
     showToast(`Hata: ${err.message}`, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-newspaper"></i> 📰 Haberi Oluştur (Ege Ajans Formatı)';
+    btn.innerHTML = '<i class="fa-solid fa-newspaper"></i> 📰 Haberi Oluştur (Kurumsal Format)';
   }
 }
 
+function sendToNewsWriter() {
+  const audioText = document.getElementById('audio-raw-text').value;
+  if (!audioText) return;
+  document.getElementById('news-raw-text').value = audioText;
+  switchView('news');
+  showToast('Deşifre metni Haber Yazarına aktarıldı.', 'success');
+}
+
+function sendToTvConverter() {
+  const newsText = document.getElementById('news-raw-result').value;
+  if (!newsText) return;
+  document.getElementById('tv-raw-text').value = newsText;
+  switchView('tv');
+  showToast('Haber metni TV Bülten Modülüne aktarıldı.', 'success');
+}
+
 // ---------------------------------------------------------
-// 3. TV HABER FORMATI & PROMPTER
+// 3. TV HABER FORMATI MODÜLÜ
 // ---------------------------------------------------------
 async function convertToTvFormat() {
   if (!AppState.apiKey) {
@@ -634,12 +693,13 @@ async function convertToTvFormat() {
     return;
   }
 
-  const text = document.getElementById('tv-raw-text').value.trim();
+  const rawText = document.getElementById('tv-raw-text').value.trim();
   const hasVideo = document.getElementById('tv-has-video').checked;
+  const isPhonetic = document.getElementById('tv-is-phonetic').checked;
   const model = document.getElementById('tv-model-select').value;
 
-  if (!text) {
-    showToast('Lütfen TV formatına dönüştürülecek haber metnini girin.', 'warning');
+  if (!rawText) {
+    showToast('Lütfen TV formatına dönüştürülecek bir haber metni girin.', 'warning');
     return;
   }
 
@@ -648,7 +708,7 @@ async function convertToTvFormat() {
   const resultText = document.getElementById('tv-result-text');
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> TV Formatına Dönüştürülüyor...';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> TV Bülten Formatına Dönüştürülüyor...';
   resultContainer.classList.add('hidden');
 
   try {
@@ -657,8 +717,12 @@ async function convertToTvFormat() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: AppState.apiKey,
-        news_text: text,
+        news_text: rawText,
         has_video: hasVideo,
+        is_phonetic: isPhonetic,
+        university_name: AppState.universityName,
+        agency_name: AppState.agencyName,
+        rector_name: AppState.rectorName,
         model: model
       })
     });
@@ -669,7 +733,7 @@ async function convertToTvFormat() {
       document.getElementById('tv-raw-result').value = data.text;
       document.getElementById('tv-used-model').innerText = `Model: ${data.used_model}`;
       resultContainer.classList.remove('hidden');
-      showToast('TV Bülten metni hazır!', 'success');
+      showToast('TV bülteni ve spiker metni hazırlandı!', 'success');
       resultContainer.scrollIntoView({ behavior: 'smooth' });
     } else {
       showToast(data.error || 'Dönüştürme başarısız oldu.', 'error');
@@ -683,19 +747,19 @@ async function convertToTvFormat() {
 }
 
 // ---------------------------------------------------------
-// 4. EDİTORYAL DENETİM MODÜLÜ
+// 4. EDİTORYAL DENETİM MODÜLÜ (3 KUTU)
 // ---------------------------------------------------------
-async function checkEditorial() {
+async function checkEditorialQuality() {
   if (!AppState.apiKey) {
     showToast('Lütfen önce Ayarlar bölümünden Gemini API Anahtarınızı girin.', 'warning');
     switchView('settings');
     return;
   }
 
-  const text = document.getElementById('editorial-raw-text').value.trim();
+  const rawText = document.getElementById('editorial-raw-text').value.trim();
   const model = document.getElementById('editorial-model-select').value;
 
-  if (!text) {
+  if (!rawText) {
     showToast('Lütfen denetlenecek haber metnini girin.', 'warning');
     return;
   }
@@ -713,25 +777,30 @@ async function checkEditorial() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: AppState.apiKey,
-        news_text: text,
+        news_text: rawText,
+        university_name: AppState.universityName,
+        agency_name: AppState.agencyName,
         rector_name: AppState.rectorName,
         model: model
       })
     });
 
     const data = await res.json();
-    if (data.success && data.structured) {
-      document.getElementById('editorial-report-text').innerHTML = marked.parse(data.structured.report);
-      document.getElementById('editorial-edited-text').innerHTML = marked.parse(data.structured.edited_text);
-      document.getElementById('editorial-changelog-text').innerHTML = marked.parse(data.structured.changelog);
+    if (data.success) {
+      const st = data.structured || {};
+      
+      document.getElementById('editorial-report-raw').value = st.report || data.text;
+      document.getElementById('editorial-report-text').innerHTML = marked.parse(st.report || data.text);
 
-      document.getElementById('editorial-raw-report').value = data.structured.report;
-      document.getElementById('editorial-raw-edited').value = data.structured.edited_text;
-      document.getElementById('editorial-raw-changelog').value = data.structured.changelog;
+      document.getElementById('editorial-edited-raw').value = st.edited_text || '';
+      document.getElementById('editorial-edited-text').innerHTML = marked.parse(st.edited_text || '*Düzeltilmiş metin üretilemedi.*');
+
+      document.getElementById('editorial-changes-raw').value = st.changelog || '';
+      document.getElementById('editorial-changes-text').innerHTML = marked.parse(st.changelog || '*Değişiklik maddesi belirtilmedi.*');
 
       document.getElementById('editorial-used-model').innerText = `Model: ${data.used_model}`;
       resultContainer.classList.remove('hidden');
-      showToast('Editoryal denetim tamamlandı!', 'success');
+      showToast('Editoryal denetim ve puanlama tamamlandı!', 'success');
       resultContainer.scrollIntoView({ behavior: 'smooth' });
     } else {
       showToast(data.error || 'Denetim başarısız oldu.', 'error');
@@ -740,35 +809,121 @@ async function checkEditorial() {
     showToast(`Hata: ${err.message}`, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-fact-check"></i> 🔍 Haberi Titizlikle Denetle';
+    btn.innerHTML = '<i class="fa-solid fa-check-double"></i> 🔍 Metni Denetle & 100 Üzerinden Puanla';
   }
 }
 
 // ---------------------------------------------------------
-// TELEPROMPTER & SESLENDİRME (TTS)
+// 5. GELİŞMİŞ TELEPROMPTER & SES SEÇENEKLERİ (TTS)
 // ---------------------------------------------------------
-function openTeleprompter(textId, title = 'Spiker Teleprompter') {
-  const text = document.getElementById(textId).value || document.getElementById(textId).innerText;
-  if (!text) {
-    showToast('Prompter için metin bulunamadı.', 'warning');
+function initTtsVoices() {
+  if (!('speechSynthesis' in window)) return;
+
+  const loadVoices = () => {
+    const voices = window.speechSynthesis.getVoices();
+    AppState.prompter.availableVoices = voices;
+
+    const select = document.getElementById('prompter-voice-select');
+    if (!select) return;
+
+    select.innerHTML = '';
+    const trVoices = voices.filter(v => v.lang.startsWith('tr') || v.lang.includes('TR'));
+    const listToUse = trVoices.length > 0 ? trVoices : voices;
+
+    listToUse.forEach((v, i) => {
+      const opt = document.createElement('option');
+      opt.value = v.voiceURI;
+      opt.textContent = `${v.name} (${v.lang})${v.default ? ' [Varsayılan]' : ''}`;
+      select.appendChild(opt);
+    });
+
+    if (trVoices.length > 0) {
+      AppState.prompter.selectedVoiceURI = trVoices[0].voiceURI;
+      select.value = trVoices[0].voiceURI;
+    }
+  };
+
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function togglePrompterVoicePanel() {
+  const panel = document.getElementById('prompter-voice-panel');
+  if (panel) {
+    panel.classList.toggle('hidden');
+  }
+}
+
+function updateTtsRate(val) {
+  AppState.prompter.ttsRate = parseFloat(val);
+  document.getElementById('prompter-rate-val').innerText = `${val}x`;
+  // Eğer seslendirme çalışıyorsa yeniden başlat
+  if (AppState.prompter.isSpeaking) {
+    stopPrompterSpeech();
+    startPrompterSpeech();
+  }
+}
+
+function updateTtsPitch(val) {
+  AppState.prompter.ttsPitch = parseFloat(val);
+  document.getElementById('prompter-pitch-val').innerText = val;
+}
+
+function updateTtsVolume(val) {
+  AppState.prompter.ttsVolume = parseFloat(val);
+  const percent = Math.round(val * 100);
+  document.getElementById('prompter-vol-val').innerText = `%${percent}`;
+}
+
+function openTeleprompter(elementId, title = '📺 Spiker Prompter') {
+  const el = document.getElementById(elementId);
+  const text = el ? (el.value || el.innerText) : '';
+
+  if (!text || text.trim().length === 0) {
+    showToast('Prompter için okunacak bir metin bulunamadı.', 'warning');
     return;
   }
 
   AppState.prompter.text = text;
   AppState.prompter.title = title;
 
-  const modal = document.getElementById('prompter-modal');
   document.getElementById('prompter-title').innerText = title;
   document.getElementById('prompter-content').innerText = text;
   document.getElementById('prompter-content').style.fontSize = `${AppState.prompter.fontSize}px`;
 
-  modal.classList.remove('hidden');
+  document.getElementById('prompter-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  resetPrompterScroll();
 }
 
 function closeTeleprompter() {
   stopPrompterScroll();
   stopPrompterSpeech();
   document.getElementById('prompter-modal').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
+
+function togglePrompterMirror() {
+  AppState.prompter.isMirrored = !AppState.prompter.isMirrored;
+  const container = document.getElementById('prompter-content');
+  if (AppState.prompter.isMirrored) {
+    container.classList.add('prompter-mirrored');
+    showToast('Prompter ayna modu açık.', 'info');
+  } else {
+    container.classList.remove('prompter-mirrored');
+    showToast('Prompter ayna modu kapalı.', 'info');
+  }
+}
+
+function changePrompterFontSize(delta) {
+  AppState.prompter.fontSize = Math.max(18, Math.min(60, AppState.prompter.fontSize + delta));
+  document.getElementById('prompter-content').style.fontSize = `${AppState.prompter.fontSize}px`;
+}
+
+function changePrompterSpeed(delta) {
+  AppState.prompter.speed = Math.max(0.5, Math.min(10, AppState.prompter.speed + delta));
+  document.getElementById('prompter-speed-label').innerText = `${AppState.prompter.speed.toFixed(1)}x`;
 }
 
 function togglePrompterScroll() {
@@ -780,35 +935,36 @@ function togglePrompterScroll() {
 }
 
 function startPrompterCountdown() {
+  const cd = document.getElementById('prompter-countdown');
+  cd.classList.remove('hidden');
   let count = 3;
-  const overlay = document.getElementById('prompter-countdown');
-  overlay.innerText = count;
-  overlay.classList.remove('hidden');
+  cd.innerText = count;
 
   const timer = setInterval(() => {
     count--;
     if (count > 0) {
-      overlay.innerText = count;
+      cd.innerText = count;
     } else {
       clearInterval(timer);
-      overlay.classList.add('hidden');
+      cd.classList.add('hidden');
       startPrompterScroll();
     }
-  }, 1000);
+  }, 800);
 }
 
 function startPrompterScroll() {
   AppState.prompter.isPlaying = true;
-  document.getElementById('btn-prompter-play').innerHTML = '<i class="fa-solid fa-pause"></i> Durdur';
-  document.getElementById('btn-prompter-play').classList.remove('bg-[#00A3E0]');
-  document.getElementById('btn-prompter-play').classList.add('bg-rose-600');
+  const btn = document.getElementById('btn-prompter-play');
+  btn.innerHTML = '<i class="fa-solid fa-pause"></i> Duraklat';
+  btn.classList.remove('bg-[#00A3E0]');
+  btn.classList.add('bg-amber-600');
 
-  const container = document.getElementById('prompter-scroll-container');
+  const scrollContainer = document.getElementById('prompter-scroll-container');
   clearInterval(AppState.prompter.scrollInterval);
 
   AppState.prompter.scrollInterval = setInterval(() => {
-    container.scrollTop += AppState.prompter.speed * 0.8;
-    if (container.scrollTop + container.clientHeight >= container.scrollHeight) {
+    scrollContainer.scrollTop += AppState.prompter.speed * 1.5;
+    if (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight) {
       stopPrompterScroll();
     }
   }, 30);
@@ -817,38 +973,21 @@ function startPrompterScroll() {
 function stopPrompterScroll() {
   AppState.prompter.isPlaying = false;
   clearInterval(AppState.prompter.scrollInterval);
-  document.getElementById('btn-prompter-play').innerHTML = '<i class="fa-solid fa-play"></i> Kaydır';
-  document.getElementById('btn-prompter-play').classList.remove('bg-rose-600');
-  document.getElementById('btn-prompter-play').classList.add('bg-[#00A3E0]');
+  const btn = document.getElementById('btn-prompter-play');
+  if (btn) {
+    btn.innerHTML = '<i class="fa-solid fa-play"></i> Kaydır';
+    btn.classList.remove('bg-amber-600');
+    btn.classList.add('bg-[#00A3E0]');
+  }
 }
 
 function resetPrompterScroll() {
   stopPrompterScroll();
-  stopPrompterSpeech();
-  document.getElementById('prompter-scroll-container').scrollTop = 0;
+  const scrollContainer = document.getElementById('prompter-scroll-container');
+  if (scrollContainer) scrollContainer.scrollTop = 0;
 }
 
-function togglePrompterMirror() {
-  AppState.prompter.isMirrored = !AppState.prompter.isMirrored;
-  const content = document.getElementById('prompter-content');
-  if (AppState.prompter.isMirrored) {
-    content.classList.add('prompter-mirror');
-  } else {
-    content.classList.remove('prompter-mirror');
-  }
-}
-
-function changePrompterFontSize(delta) {
-  AppState.prompter.fontSize = Math.max(18, Math.min(54, AppState.prompter.fontSize + delta));
-  document.getElementById('prompter-content').style.fontSize = `${AppState.prompter.fontSize}px`;
-}
-
-function changePrompterSpeed(delta) {
-  AppState.prompter.speed = Math.max(0.5, Math.min(10, AppState.prompter.speed + delta));
-  document.getElementById('prompter-speed-label').innerText = `${AppState.prompter.speed.toFixed(1)}x`;
-}
-
-// Web SpeechSynthesis TTS
+// TTS Sesli Okuma
 function togglePrompterSpeech() {
   if (AppState.prompter.isSpeaking) {
     stopPrompterSpeech();
@@ -859,32 +998,54 @@ function togglePrompterSpeech() {
 
 function startPrompterSpeech() {
   if (!('speechSynthesis' in window)) {
-    showToast('Tarayıcınız sesli okuma özelliğini desteklemiyor.', 'warning');
+    showToast('Tarayıcınız sesli okumayı (TTS) desteklemiyor.', 'error');
     return;
   }
 
+  const text = AppState.prompter.text;
+  if (!text) return;
+
   window.speechSynthesis.cancel();
 
-  const cleanText = AppState.prompter.text
-    .replace(/KJ:/g, '')
+  // Yıldız ve parantez temizliği
+  const cleanSpeechText = text
+    .replace(/\*\*/g, '')
+    .replace(/#/g, '')
+    .replace(/KJ:.*?\n/g, '')
     .replace(/CAM:/g, '')
     .replace(/SES:/g, '')
-    .replace(/\*\*/g, '')
-    .replace(/#/g, '');
+    .replace(/Video/g, '')
+    .trim();
 
-  const utterance = new SpeechSynthesisUtterance(cleanText);
+  const utterance = new SpeechSynthesisUtterance(cleanSpeechText);
   utterance.lang = 'tr-TR';
-  utterance.rate = 0.95;
+  utterance.rate = AppState.prompter.ttsRate;
+  utterance.pitch = AppState.prompter.ttsPitch;
+  utterance.volume = AppState.prompter.ttsVolume;
+
+  // Seçilen ses
+  const voiceSelect = document.getElementById('prompter-voice-select');
+  if (voiceSelect && voiceSelect.value) {
+    const chosen = AppState.prompter.availableVoices.find(v => v.voiceURI === voiceSelect.value);
+    if (chosen) utterance.voice = chosen;
+  }
+
+  utterance.onstart = () => {
+    AppState.prompter.isSpeaking = true;
+    const btn = document.getElementById('btn-prompter-tts');
+    btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> <span>Sustur</span>';
+    btn.classList.add('bg-rose-700');
+
+    // Prompter kaydırmayı konuşma hızıyla başlat
+    if (!AppState.prompter.isPlaying) {
+      startPrompterScroll();
+    }
+  };
 
   utterance.onend = () => stopPrompterSpeech();
   utterance.onerror = () => stopPrompterSpeech();
 
   window.speechSynthesis.speak(utterance);
-  AppState.prompter.isSpeaking = true;
-
-  const btn = document.getElementById('btn-prompter-tts');
-  btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Sustur';
-  btn.classList.add('bg-emerald-700');
 }
 
 function stopPrompterSpeech() {
@@ -894,8 +1055,8 @@ function stopPrompterSpeech() {
   AppState.prompter.isSpeaking = false;
   const btn = document.getElementById('btn-prompter-tts');
   if (btn) {
-    btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Seslendir (TTS)';
-    btn.classList.remove('bg-emerald-700');
+    btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> <span>Seslendir (TTS)</span>';
+    btn.classList.remove('bg-rose-700');
   }
 }
 
@@ -931,7 +1092,9 @@ async function exportDocx(elementId, defaultTitle = 'HaberCiM_Belge', isTv = fal
       body: JSON.stringify({
         title: defaultTitle,
         content: text,
-        is_tv: isTv
+        is_tv: isTv,
+        university_name: AppState.universityName,
+        agency_name: AppState.agencyName
       })
     });
 
