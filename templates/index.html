@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HaberCiM - Ege Ajans AI Medya Asistanı</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/static/logo.png">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ege: {
+              navy: '#003366',
+              cyan: '#00A3E0',
+              gold: '#E5A823',
+              dark: '#0B132B'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Font Awesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Marked.js for Markdown Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-full antialiased">
+
+  <!-- ======================================================== -->
+  <!-- NAVBAR / HEADER                                          -->
+  <!-- ======================================================== -->
+  <header class="sticky top-0 z-40 bg-[#003366] text-white shadow-md border-b border-cyan-900/30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & İsim -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-white/10 p-1.5 flex items-center justify-center border border-white/20">
+            <img src="/static/logo.png" alt="HaberCiM Logo" class="w-full h-full object-contain">
+          </div>
+          <div>
+            <div class="font-extrabold text-xl tracking-tight brand-font flex items-center gap-2">
+              <span>HaberCiM</span>
+              <span class="text-[10px] uppercase font-bold tracking-widest bg-[#00A3E0] px-2 py-0.5 rounded-full text-white">Ege Ajans AI</span>
+            </div>
+            <div class="text-[11px] text-cyan-200/80 -mt-0.5">Yapay Zeka Medya Masası</div>
+          </div>
+        </div>
+
+        <!-- Masaüstü Navigasyon -->
+        <nav class="hidden md:flex items-center gap-1 text-sm font-medium">
+          <button onclick="switchView('dashboard')" data-view="dashboard" class="nav-link px-3 py-2 rounded-lg hover:bg-white/10 transition bg-white/20 text-white">
+            <i class="fa-solid fa-house mr-1.5"></i> Ana Sayfa
+          </button>
+          <button onclick="switchView('audio')" data-view="audio" class="nav-link px-3 py-2 rounded-lg hover:bg-white/10 transition text-cyan-100">
+            <i class="fa-solid fa-microphone mr-1.5"></i> Ses Çözümleme
+          </button>
+          <button onclick="switchView('news')" data-view="news" class="nav-link px-3 py-2 rounded-lg hover:bg-white/10 transition text-cyan-100">
+            <i class="fa-solid fa-newspaper mr-1.5"></i> Haber Yazarı
+          </button>
+          <button onclick="switchView('tv')" data-view="tv" class="nav-link px-3 py-2 rounded-lg hover:bg-white/10 transition text-cyan-100">
+            <i class="fa-solid fa-tv mr-1.5"></i> TV & Prompter
+          </button>
+          <button onclick="switchView('editorial')" data-view="editorial" class="nav-link px-3 py-2 rounded-lg hover:bg-white/10 transition text-cyan-100">
+            <i class="fa-solid fa-fact-check mr-1.5"></i> Editoryal Denetim
+          </button>
+        </nav>
+
+        <!-- Ayarlar Butonu -->
+        <div class="flex items-center gap-2">
+          <button onclick="switchView('settings')" data-view="settings" class="nav-link p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition text-white" title="Ayarlar & Model Yönetimi">
+            <i class="fa-solid fa-gear text-lg"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobil Hızlı Menü Çubuğu -->
+    <div class="md:hidden flex items-center justify-around border-t border-white/10 py-2 bg-[#002852] text-xs">
+      <button onclick="switchView('dashboard')" class="text-white py-1 px-2 flex flex-col items-center">
+        <i class="fa-solid fa-house mb-0.5"></i> <span>Ana Sayfa</span>
+      </button>
+      <button onclick="switchView('audio')" class="text-cyan-200 py-1 px-2 flex flex-col items-center">
+        <i class="fa-solid fa-microphone mb-0.5"></i> <span>Ses</span>
+      </button>
+      <button onclick="switchView('news')" class="text-cyan-200 py-1 px-2 flex flex-col items-center">
+        <i class="fa-solid fa-newspaper mb-0.5"></i> <span>Haber</span>
+      </button>
+      <button onclick="switchView('tv')" class="text-cyan-200 py-1 px-2 flex flex-col items-center">
+        <i class="fa-solid fa-tv mb-0.5"></i> <span>TV</span>
+      </button>
+      <button onclick="switchView('editorial')" class="text-cyan-200 py-1 px-2 flex flex-col items-center">
+        <i class="fa-solid fa-check-double mb-0.5"></i> <span>Denetim</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- ANA İÇERİK KONTEYNERİ                                     -->
+  <!-- ======================================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- API Key Eksik Uyarısı -->
+    <div id="api-key-banner" class="hidden mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 shadow-sm flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        </div>
+        <div>
+          <div class="font-bold text-amber-900 text-sm">Gemini API Anahtarı Tanımlı Değil</div>
+          <div class="text-xs text-amber-800">Yapay zeka modellerini kullanmak için lütfen geçerli bir API anahtarı kaydedin.</div>
+        </div>
+      </div>
+      <button onclick="switchView('settings')" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shrink-0">
+        Anahtarı Ayarla
+      </button>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- GÖRÜNÜM 1: DASHBOARD (IZGARA / GRID ANA SAYFA)             -->
+    <!-- ======================================================== -->
+    <div id="view-dashboard" class="space-y-6">
+      
+      <!-- Hero Karşılama Kartı -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#003366] via-[#0B2545] to-[#004D99] text-white p-6 sm:p-8 shadow-xl border border-cyan-900/40">
+        <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div class="space-y-3 text-center sm:text-left">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00A3E0]/20 border border-[#00A3E0]/40 text-[#00A3E0] text-xs font-bold uppercase tracking-wider">
+              <i class="fa-solid fa-university"></i> Ege Üniversitesi Ege Ajans
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight brand-font">
+              HaberCiM Akıllı Medya Asistanı
+            </h1>
+            <p class="text-slate-300 text-sm max-w-xl leading-relaxed">
+              Ses deşifresi, Ege Ajans kurumsal formatında haber yazımı, TV bülten kısaltması, spiker teleprompter ve editoryal denetim platformu.
+            </p>
+            <div class="text-xs text-cyan-200 font-medium">
+              <i class="fa-solid fa-building-columns mr-1"></i> Rektörlük: <span id="rector-name-display" class="font-bold text-white">Prof. Dr. Musa ALCI</span>
+            </div>
+          </div>
+          <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white/10 p-3 border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+            <img src="/static/logo.png" alt="Logo" class="w-full h-full object-contain filter drop-shadow-md">
+          </div>
+        </div>
+      </div>
+
+      <!-- Izgara Başlığı -->
+      <div class="flex items-center justify-between pt-2">
+        <h2 class="text-lg font-bold text-slate-800 brand-font flex items-center gap-2">
+          <i class="fa-solid fa-cubes text-[#003366]"></i> Üretim Modülleri & Araçlar
+        </h2>
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700">4 Temel Modül</span>
+      </div>
+
+      <!-- RESPONSIVE IZGARA (GRID) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        <!-- Kart 1: Ses Çözümleme -->
+        <div onclick="switchView('audio')" class="glass-card rounded-2xl p-5 cursor-pointer transition transform hover:-translate-y-1 flex flex-col justify-between group">
+          <div>
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
+                <i class="fa-solid fa-microphone"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">🎙️ Canlı Kayıt</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-base mb-1.5 group-hover:text-[#003366] transition">
+              1. Ses Çözümleme
+            </h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Mikrofonla canlı ses kaydı veya dosya yükleme ile deşifre, imla düzeltme ve Word (.docx) çıktısı.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#003366]">
+            <span>Modüle Git</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+          </div>
+        </div>
+
+        <!-- Kart 2: Haber Yazarı -->
+        <div onclick="switchView('news')" class="glass-card rounded-2xl p-5 cursor-pointer transition transform hover:-translate-y-1 flex flex-col justify-between group">
+          <div>
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#003366] to-[#00A3E0] text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
+                <i class="fa-solid fa-newspaper"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800">📰 Multimodal</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-base mb-1.5 group-hover:text-[#003366] transition">
+              2. Ege Ajans Haber Yazarı
+            </h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Ham notlar, referans URL ve fotoğraflarla Ege Ajans kurumsal formatında 5N1K haberi üretimi.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#003366]">
+            <span>Modüle Git</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+          </div>
+        </div>
+
+        <!-- Kart 3: TV Formatı & Prompter -->
+        <div onclick="switchView('tv')" class="glass-card rounded-2xl p-5 cursor-pointer transition transform hover:-translate-y-1 flex flex-col justify-between group">
+          <div>
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-500 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
+                <i class="fa-solid fa-tv"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">📺 Prompter & TTS</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-base mb-1.5 group-hover:text-[#003366] transition">
+              3. TV Haber & Prompter
+            </h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Video opsiyonlu bülten metni, KJ/CAM etiketleri, stüdyo Teleprompter modu ve Türkçe seslendirme.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#003366]">
+            <span>Modüle Git</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+          </div>
+        </div>
+
+        <!-- Kart 4: Editoryal Denetim -->
+        <div onclick="switchView('editorial')" class="glass-card rounded-2xl p-5 cursor-pointer transition transform hover:-translate-y-1 flex flex-col justify-between group">
+          <div>
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
+                <i class="fa-solid fa-fact-check"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">🔍 100 Puan</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-base mb-1.5 group-hover:text-[#003366] transition">
+              4. Editoryal Denetim
+            </h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              TDK imla denetimi, 5N1K kontrol karnesi ve 3 ayrı kopyalanabilir kutuda rapor/nihai metin.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#003366]">
+            <span>Modüle Git</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- İmza & Geliştirici Kutusu -->
+      <div class="mt-8 flex items-center justify-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm text-xs text-slate-600">
+          <i class="fa-solid fa-code text-[#003366]"></i>
+          <span>Geliştiren:</span>
+          <span class="font-bold text-[#003366]">Dr. Kemal ŞİMŞEK</span>
+          <span class="text-[#00A3E0] font-semibold">&bull; Bilgisayar Mühendisi</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- GÖRÜNÜM 2: SES ÇÖZÜMLEME                                  -->
+    <!-- ======================================================== -->
+    <div id="view-audio" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold text-slate-900 brand-font flex items-center gap-2">
+            <i class="fa-solid fa-microphone text-orange-600"></i> Ses Çözümleme Asistanı
+          </h2>
+          <p class="text-xs text-slate-500">Canlı ses kaydedin veya ses dosyası yükleyin; Gemini AI akıcı Türkçe paragraflara dönüştürsün.</p>
+        </div>
+        <button onclick="switchView('dashboard')" class="text-xs text-slate-500 hover:text-slate-800"><i class="fa-solid fa-arrow-left"></i> Geri</button>
+      </div>
+
+      <!-- Model Seçimi -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <label class="text-xs font-bold text-slate-700 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-[#003366]"></i> Kullanılacak Model:
+        </label>
+        <select id="audio-model-select" class="w-full sm:w-72 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#003366]">
+        </select>
+      </div>
+
+      <!-- Kayıt ve Dosya Yükleme Paneli -->
+      <div class="glass-card rounded-2xl p-6 sm:p-8 text-center space-y-6">
+        
+        <!-- Canlı Nabız Mikrofon Butonu -->
+        <div class="flex flex-col items-center justify-center">
+          <button id="record-btn" onclick="toggleLiveRecording()" class="w-24 h-24 rounded-full bg-[#003366] text-white flex items-center justify-center shadow-lg hover:opacity-90 transition duration-300">
+            <i class="fa-solid fa-microphone text-3xl"></i>
+          </button>
+          <div id="record-timer" class="mt-3 font-mono text-xl font-bold text-slate-800">00:00</div>
+          <div id="record-status" class="text-xs font-semibold text-slate-500">Canlı Kayıt İçin Dokunun</div>
+        </div>
+
+        <div class="flex items-center gap-4 max-w-sm mx-auto">
+          <div class="flex-1 h-px bg-slate-200"></div>
+          <span class="text-xs font-bold text-slate-400">VEYA</span>
+          <div class="flex-1 h-px bg-slate-200"></div>
+        </div>
+
+        <!-- Dosya Yükleme -->
+        <div>
+          <label class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs cursor-pointer shadow-sm transition">
+            <i class="fa-solid fa-cloud-arrow-up text-[#003366]"></i> Cihazdan Ses Dosyası Seç (.mp3, .m4a, .wav)
+            <input id="audio-file-input" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" class="hidden" onchange="handleAudioFileUpload(event)">
+          </label>
+        </div>
+
+        <!-- Önizleme ve Oynatıcı -->
+        <div id="audio-preview-container" class="hidden p-4 rounded-xl bg-cyan-50/60 border border-cyan-200 max-w-md mx-auto space-y-3">
+          <div class="flex items-center justify-between text-xs font-bold text-cyan-900">
+            <span id="audio-file-name">Kayıtlı Ses</span>
+            <button onclick="clearRecordedAudio()" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i> Sil</button>
+          </div>
+          <audio id="audio-playback" controls class="w-full h-10"></audio>
+        </div>
+
+        <!-- Çözümlemeyi Başlat Butonu -->
+        <div>
+          <button id="btn-process-audio" onclick="processAudioTranscription()" class="w-full sm:w-auto px-8 py-3.5 bg-[#003366] hover:bg-[#002244] text-white rounded-xl font-bold text-sm shadow-md transition">
+            <i class="fa-solid fa-bolt"></i> Çözümlemeyi Başlat
+          </button>
+        </div>
+      </div>
+
+      <!-- Çözümleme Sonucu -->
+      <div id="audio-result-container" class="hidden glass-card rounded-2xl p-6 space-y-4 border-2 border-orange-200">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+            <h3 class="font-bold text-slate-900 text-sm">🎙️ Düzenlenmiş ve İyileştirilmiş Metin</h3>
+          </div>
+          <span id="audio-used-model" class="text-xs font-mono text-slate-400"></span>
+        </div>
+
+        <input type="hidden" id="audio-raw-text">
+        <div id="audio-result-text" class="markdown-body text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button onclick="copyToClipboard('audio-raw-text', 'Çözümlenen Metin')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+            <i class="fa-solid fa-copy mr-1"></i> Kopyala
+          </button>
+          <button onclick="exportDocx('audio-raw-text', 'Ses_Cozumleme_Sonucu')" class="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition shadow-sm">
+            <i class="fa-solid fa-file-word mr-1"></i> Word (.docx) İndir
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- GÖRÜNÜM 3: HABER YAZARI                                   -->
+    <!-- ======================================================== -->
+    <div id="view-news" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold text-slate-900 brand-font flex items-center gap-2">
+            <i class="fa-solid fa-newspaper text-[#003366]"></i> Ege Ajans Haber Yazarı
+          </h2>
+          <p class="text-xs text-slate-500">Ham notlar ve fotoğraflarla Ege Ajans kurumsal formatında, 5N1K ve Rektör demeci içeren haber üretin.</p>
+        </div>
+        <button onclick="switchView('dashboard')" class="text-xs text-slate-500 hover:text-slate-800"><i class="fa-solid fa-arrow-left"></i> Geri</button>
+      </div>
+
+      <!-- Model Seçimi -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <label class="text-xs font-bold text-slate-700 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-[#003366]"></i> Kullanılacak Model:
+        </label>
+        <select id="news-model-select" class="w-full sm:w-72 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#003366]">
+        </select>
+      </div>
+
+      <!-- Şablon Butonları -->
+      <div class="flex flex-wrap gap-2">
+        <button onclick="applyNewsTemplate('tubitak')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-[#003366] hover:text-[#003366] transition">
+          <i class="fa-solid fa-award text-amber-500 mr-1"></i> TÜBİTAK Başarısı
+        </button>
+        <button onclick="applyNewsTemplate('akademik')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-[#003366] hover:text-[#003366] transition">
+          <i class="fa-solid fa-graduation-cap text-cyan-600 mr-1"></i> Akademik Açılış
+        </button>
+        <button onclick="applyNewsTemplate('green')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-[#003366] hover:text-[#003366] transition">
+          <i class="fa-solid fa-leaf text-emerald-600 mr-1"></i> Yeşil Kampüs & Sürdürülebilirlik
+        </button>
+      </div>
+
+      <!-- Giriş Formu -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">Ham Metin / Etkinlik Notları:</label>
+          <textarea id="news-raw-text" rows="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-slate-800 focus:outline-none focus:border-[#003366] focus:bg-white transition" placeholder="Etkinliğin kimin tarafından, nerede, ne zaman yapıldığına dair notları buraya girin..."></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Referans URL / Kaynak (İsteğe bağlı):</label>
+          <input id="news-url" type="url" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#003366]" placeholder="https://euegeajans.com/...">
+        </div>
+
+        <!-- Görsel Yükleme -->
+        <div>
+          <div class="flex items-center gap-3">
+            <label class="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer transition">
+              <i class="fa-solid fa-image text-[#003366] mr-1"></i> Fotoğraf Ekle (Multimodal)
+              <input id="news-image-input" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            </label>
+          </div>
+          <div id="news-image-container" class="hidden mt-3 relative inline-block">
+            <img id="news-image-preview" src="" alt="Haber Fotoğrafı" class="h-32 rounded-xl object-cover border border-slate-200 shadow-sm">
+            <button onclick="clearNewsImage()" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs shadow-md">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+
+        <button id="btn-generate-news" onclick="generateNews()" class="w-full py-3.5 bg-[#003366] hover:bg-[#002244] text-white rounded-xl font-bold text-sm shadow-md transition">
+          <i class="fa-solid fa-newspaper"></i> 📰 Haberi Oluştur (Ege Ajans Formatı)
+        </button>
+      </div>
+
+      <!-- Sonuç Kartı -->
+      <div id="news-result-container" class="hidden glass-card rounded-2xl p-6 space-y-4 border-2 border-cyan-200">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-newspaper text-[#003366]"></i>
+            <h3 class="font-bold text-slate-900 text-sm">📰 Ege Ajans Kurumsal Haber Metni</h3>
+          </div>
+          <span id="news-used-model" class="text-xs font-mono text-slate-400"></span>
+        </div>
+
+        <input type="hidden" id="news-raw-result">
+        <div id="news-result-text" class="markdown-body text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button onclick="copyToClipboard('news-raw-result', 'Haber Metni')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+            <i class="fa-solid fa-copy mr-1"></i> Kopyala
+          </button>
+          <button onclick="exportDocx('news-raw-result', 'Ege_Ajans_Haber')" class="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition shadow-sm">
+            <i class="fa-solid fa-file-word mr-1"></i> Word (.docx) İndir
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- GÖRÜNÜM 4: TV HABER FORMATI & PROMPTER                    -->
+    <!-- ======================================================== -->
+    <div id="view-tv" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold text-slate-900 brand-font flex items-center gap-2">
+            <i class="fa-solid fa-tv text-sky-600"></i> TV Haber Formatı & Prompter
+          </h2>
+          <p class="text-xs text-slate-500">Haberleri TV bülteni için KJ, CAM, SES etiketleriyle kısaltın ve canlı Prompter moduyla seslendirin.</p>
+        </div>
+        <button onclick="switchView('dashboard')" class="text-xs text-slate-500 hover:text-slate-800"><i class="fa-solid fa-arrow-left"></i> Geri</button>
+      </div>
+
+      <!-- Model Seçimi -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <label class="text-xs font-bold text-slate-700 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-[#003366]"></i> Kullanılacak Model:
+        </label>
+        <select id="tv-model-select" class="w-full sm:w-72 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#003366]">
+        </select>
+      </div>
+
+      <!-- Giriş Formu -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        
+        <!-- Video Opsiyonu Anahtarı -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-slate-800">Haberde Görüntü / Video / Röportaj Var mı?</div>
+            <div class="text-[11px] text-slate-500">Açıksa VTR/Röportaj geçişleri eklenir; kapalıysa yalnızca spiker okuma bülteni hazırlanır.</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="tv-has-video" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#003366]"></div>
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">Kısaltılacak & TV Formatına Dönüştürülecek Metin:</label>
+          <textarea id="tv-raw-text" rows="7" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-slate-800 focus:outline-none focus:border-[#003366] focus:bg-white transition" placeholder="Uzun haber metnini buraya yapıştırın..."></textarea>
+        </div>
+
+        <button id="btn-convert-tv" onclick="convertToTvFormat()" class="w-full py-3.5 bg-[#003366] hover:bg-[#002244] text-white rounded-xl font-bold text-sm shadow-md transition">
+          <i class="fa-solid fa-tv"></i> 📺 TV Bülten Formatına Dönüştür
+        </button>
+      </div>
+
+      <!-- Sonuç Kartı -->
+      <div id="tv-result-container" class="hidden glass-card rounded-2xl p-6 space-y-4 border-2 border-sky-200">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-tv text-sky-600"></i>
+            <h3 class="font-bold text-slate-900 text-sm">📺 TV Bülten & Spiker Metni (Yıldızsız Düz Metin)</h3>
+          </div>
+          <span id="tv-used-model" class="text-xs font-mono text-slate-400"></span>
+        </div>
+
+        <!-- Prompter Başlat Butonu -->
+        <button onclick="openTeleprompter('tv-raw-result', '📺 TV Bülten Prompter')" class="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition">
+          <i class="fa-solid fa-circle-play text-cyan-400 text-base"></i> 🎥 Prompter Modunu Başlat (Seslendirme Desteğiyle)
+        </button>
+
+        <input type="hidden" id="tv-raw-result">
+        <div id="tv-result-text" class="text-sm font-mono text-slate-800 whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border border-slate-200 leading-relaxed"></div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button onclick="copyToClipboard('tv-raw-result', 'TV Metni')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+            <i class="fa-solid fa-copy mr-1"></i> Kopyala
+          </button>
+          <button onclick="exportDocx('tv-raw-result', 'tv_haber_bulteni', true)" class="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition shadow-sm">
+            <i class="fa-solid fa-file-word mr-1"></i> Word (.docx) İndir
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- GÖRÜNÜM 5: EDİTORYAL DENETİM                              -->
+    <!-- ======================================================== -->
+    <div id="view-editorial" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold text-slate-900 brand-font flex items-center gap-2">
+            <i class="fa-solid fa-fact-check text-teal-600"></i> Dil, Üslup & Editoryal Denetim
+          </h2>
+          <p class="text-xs text-slate-500">TDK imla denetimi, 5N1K karnesi ve 3 ayrı kopyalanabilir kutuda rapor & kusursuz metin.</p>
+        </div>
+        <button onclick="switchView('dashboard')" class="text-xs text-slate-500 hover:text-slate-800"><i class="fa-solid fa-arrow-left"></i> Geri</button>
+      </div>
+
+      <!-- Model Seçimi -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <label class="text-xs font-bold text-slate-700 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-[#003366]"></i> Kullanılacak Model:
+        </label>
+        <select id="editorial-model-select" class="w-full sm:w-72 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#003366]">
+        </select>
+      </div>
+
+      <!-- Giriş Formu -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">Denetlenecek Haber Metni:</label>
+          <textarea id="editorial-raw-text" rows="7" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-slate-800 focus:outline-none focus:border-[#003366] focus:bg-white transition" placeholder="TDK imla, 5N1K ve ajans üslubu bakımından denetlenecek metni buraya yapıştırın..."></textarea>
+        </div>
+
+        <button id="btn-check-editorial" onclick="checkEditorial()" class="w-full py-3.5 bg-[#003366] hover:bg-[#002244] text-white rounded-xl font-bold text-sm shadow-md transition">
+          <i class="fa-solid fa-fact-check"></i> 🔍 Haberi Titizlikle Denetle
+        </button>
+      </div>
+
+      <!-- AYRI AYRI 3 KUTULU SONUÇ ALANI -->
+      <div id="editorial-result-container" class="hidden space-y-5">
+        
+        <div class="text-right">
+          <span id="editorial-used-model" class="text-xs font-mono text-slate-400"></span>
+        </div>
+
+        <!-- KUTU 1: RAPOR & 100 PUAN -->
+        <div class="glass-card rounded-2xl p-5 border-2 border-indigo-100 shadow-sm space-y-3">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-bold text-[#003366] text-sm flex items-center gap-2">
+              <i class="fa-solid fa-chart-pie text-indigo-600"></i> 📊 1. Editoryal Değerlendirme & 5N1K Raporu
+            </h3>
+            <button onclick="copyToClipboard('editorial-raw-report', 'Editoryal Rapor')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition">
+              <i class="fa-solid fa-copy mr-1"></i> Raporu Kopyala
+            </button>
+          </div>
+          <input type="hidden" id="editorial-raw-report">
+          <div id="editorial-report-text" class="markdown-body text-xs text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+        </div>
+
+        <!-- KUTU 2: DÜZELTİLMİŞ NİHAİ METİN -->
+        <div class="glass-card rounded-2xl p-5 border-2 border-emerald-300 shadow-md space-y-3 bg-emerald-50/20">
+          <div class="flex items-center justify-between pb-3 border-b border-emerald-100">
+            <h3 class="font-bold text-emerald-800 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600"></i> ✍️ 2. Düzeltilmiş ve İyileştirilmiş Nihai Haber Metni
+            </h3>
+            <div class="flex items-center gap-2">
+              <button onclick="copyToClipboard('editorial-raw-edited', 'Düzeltilmiş Metin')" class="px-3 py-1.5 rounded-lg bg-white border border-emerald-300 hover:bg-emerald-50 text-xs font-bold text-emerald-800 transition">
+                <i class="fa-solid fa-copy mr-1"></i> Metni Kopyala
+              </button>
+              <button onclick="exportDocx('editorial-raw-edited', 'Duzeltilmis_Haber_Metni')" class="px-3.5 py-1.5 rounded-lg bg-[#003366] text-white text-xs font-bold hover:bg-[#002244] transition shadow-sm">
+                <i class="fa-solid fa-file-word mr-1"></i> Word İndir
+              </button>
+            </div>
+          </div>
+          <input type="hidden" id="editorial-raw-edited">
+          <div id="editorial-edited-text" class="markdown-body text-sm text-slate-800 bg-white p-4 rounded-xl border border-emerald-200 leading-relaxed shadow-inner"></div>
+        </div>
+
+        <!-- KUTU 3: DEĞİŞİKLİK MADDELERİ -->
+        <div class="glass-card rounded-2xl p-5 border-2 border-amber-100 shadow-sm space-y-3">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-pen-ruler text-amber-600"></i> 📝 3. Yapılan Düzeltmeler & Değişiklik Maddeleri
+            </h3>
+            <button onclick="copyToClipboard('editorial-raw-changelog', 'Değişiklikler')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition">
+              <i class="fa-solid fa-copy mr-1"></i> Maddeleri Kopyala
+            </button>
+          </div>
+          <input type="hidden" id="editorial-raw-changelog">
+          <div id="editorial-changelog-text" class="markdown-body text-xs text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- GÖRÜNÜM 6: AYARLAR & MODEL YÖNETİMİ                       -->
+    <!-- ======================================================== -->
+    <div id="view-settings" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold text-slate-900 brand-font flex items-center gap-2">
+            <i class="fa-solid fa-gear text-[#003366]"></i> Ayarlar & Gemini Model Yönetimi
+          </h2>
+          <p class="text-xs text-slate-500">API anahtarınızı yönetin, modelleri ekleyin/düzenleyin/silin ve modül varsayılanlarını belirleyin.</p>
+        </div>
+        <button onclick="switchView('dashboard')" class="text-xs text-slate-500 hover:text-slate-800"><i class="fa-solid fa-arrow-left"></i> Geri</button>
+      </div>
+
+      <!-- 1. API Anahtarı Kartı -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-key text-[#003366]"></i> Google Gemini API Anahtarı
+        </h3>
+        <div>
+          <input id="settings-api-key" type="password" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-mono focus:outline-none focus:border-[#003366]" placeholder="AIzaSy...">
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-test-key" onclick="testApiKey()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition">
+            <i class="fa-solid fa-circle-check"></i> Bağlantıyı Test Et
+          </button>
+          <button id="btn-fetch-models" onclick="fetchRemoteModels()" class="px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white rounded-xl text-xs font-bold transition shadow-sm">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Modelleri Çek
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Kurumsal Parametreler -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-building-columns text-[#003366]"></i> Kurumsal Parametreler
+        </h3>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Ege Üniversitesi Rektör Adı:</label>
+          <input id="settings-rector-name" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#003366]">
+        </div>
+      </div>
+
+      <!-- 3. Modül Model Tercihleri -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-[#003366]"></i> Modül Bazlı Varsayılan Modeller
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Genel Model:</label>
+            <select id="settings-global-model" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">🎙️ Ses Çözümleme:</label>
+            <select id="settings-audio-model" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">📰 Haber Yazarı:</label>
+            <select id="settings-news-model" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">📺 TV Haber:</label>
+            <select id="settings-tv-model" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800"></select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-semibold text-slate-700 mb-1">🔍 Editoryal Denetim:</label>
+            <select id="settings-editorial-model" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Model Listesi Yönetimi (CRUD) -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-brain text-[#003366]"></i> Kayıtlı Gemini Modelleri
+          </h3>
+          <button onclick="openAddModelModal()" class="px-3 py-1.5 rounded-xl bg-[#003366] text-white text-xs font-bold hover:bg-[#002244] transition shadow-sm">
+            <i class="fa-solid fa-plus"></i> Model Ekle
+          </button>
+        </div>
+
+        <div id="model-management-list" class="space-y-2"></div>
+
+        <div class="text-right pt-2">
+          <button onclick="resetModelsToDefault()" class="text-xs text-amber-700 hover:underline">
+            <i class="fa-solid fa-rotate-left"></i> Fabrika Ayarlarına Sıfırla
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. Geliştirici & İmza Kartı -->
+      <div class="glass-card rounded-2xl p-5 border-2 border-cyan-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-[#003366]/10 text-[#003366] flex items-center justify-center text-2xl shrink-0">
+          <i class="fa-solid fa-user-check"></i>
+        </div>
+        <div>
+          <div class="text-xs font-semibold text-slate-400">Geliştiren</div>
+          <div class="text-base font-bold text-[#003366]">Dr. Kemal ŞİMŞEK</div>
+          <div class="text-xs font-semibold text-[#00A3E0]">Bilgisayar Mühendisi</div>
+        </div>
+      </div>
+
+      <!-- Kaydet Butonu -->
+      <button onclick="saveSettings()" class="w-full py-4 bg-[#003366] hover:bg-[#002244] text-white rounded-2xl font-bold text-sm shadow-lg transition">
+        <i class="fa-solid fa-floppy-disk mr-1"></i> Tüm Ayarları Kaydet
+      </button>
+
+    </div>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- FOOTER                                                   -->
+  <!-- ======================================================== -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      <div class="flex items-center gap-2">
+        <img src="/static/logo.png" alt="Logo" class="w-5 h-5">
+        <span class="font-bold text-slate-800">HaberCiM</span> &bull; Ege Üniversitesi Ege Ajans AI Asistanı
+      </div>
+      <div>
+        Geliştiren: <span class="font-bold text-[#003366]">Dr. Kemal ŞİMŞEK</span> (Bilgisayar Mühendisi)
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- TELEPROMPTER FULLSCREEN MODAL                            -->
+  <!-- ======================================================== -->
+  <div id="prompter-modal" class="hidden fixed inset-0 z-50 bg-black text-white flex flex-col">
+    <!-- Üst Kontrol Çubuğu -->
+    <div class="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span id="prompter-title" class="font-bold text-sm text-cyan-400 font-mono">📺 Spiker Prompter</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="togglePrompterMirror()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-bold hover:bg-slate-700 transition" title="Ayna Modu (Ters Yansıtma)">
+          <i class="fa-solid fa-arrows-left-right"></i> Ayna
+        </button>
+        <button id="btn-prompter-tts" onclick="togglePrompterSpeech()" class="px-3 py-1.5 rounded-lg bg-[#003366] text-xs font-bold hover:bg-[#002244] transition">
+          <i class="fa-solid fa-volume-high"></i> Seslendir (TTS)
+        </button>
+        <button onclick="closeTeleprompter()" class="p-2 text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Prompter Gövdesi & Okuma Alanı -->
+    <div id="prompter-scroll-container" class="relative flex-1 overflow-y-auto px-8 sm:px-16 py-32 text-center">
+      <div class="eye-line-marker"></div>
+      
+      <!-- Geri Sayım Göstergesi -->
+      <div id="prompter-countdown" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 rounded-full bg-[#003366]/90 border-4 border-cyan-400 text-white font-extrabold text-6xl flex items-center justify-center shadow-2xl z-20">
+        3
+      </div>
+
+      <div id="prompter-content" class="max-w-4xl mx-auto font-bold tracking-wide leading-loose select-none transition-all duration-200"></div>
+      <div class="h-96"></div>
+    </div>
+
+    <!-- Alt Kontrol Paneli -->
+    <div class="p-4 bg-slate-900 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+      <div class="flex items-center gap-4">
+        <!-- Boyut Ayarı -->
+        <div class="flex items-center gap-1">
+          <span class="text-slate-400 mr-1">Boyut:</span>
+          <button onclick="changePrompterFontSize(-2)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 font-bold">-</button>
+          <button onclick="changePrompterFontSize(2)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 font-bold">+</button>
+        </div>
+        <!-- Hız Ayarı -->
+        <div class="flex items-center gap-1">
+          <span class="text-slate-400 mr-1">Hız:</span>
+          <button onclick="changePrompterSpeed(-0.5)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 font-bold">-</button>
+          <span id="prompter-speed-label" class="font-mono px-1">2.0x</span>
+          <button onclick="changePrompterSpeed(0.5)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 font-bold">+</button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="resetPrompterScroll()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold transition">
+          <i class="fa-solid fa-rotate-left"></i> Başa Dön
+        </button>
+        <button id="btn-prompter-play" onclick="togglePrompterScroll()" class="px-6 py-2 rounded-xl bg-[#00A3E0] hover:bg-[#0088ba] font-bold transition shadow-md">
+          <i class="fa-solid fa-play"></i> Kaydır
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODEL EKLEME / DÜZENLEME MODALI                          -->
+  <!-- ======================================================== -->
+  <div id="model-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-100">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 id="model-modal-title" class="font-bold text-slate-900 text-base">Yeni Model Ekle</h3>
+        <button onclick="closeModelModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Model ID:</label>
+          <input id="modal-model-id" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-mono text-slate-800" placeholder="gemini-3.8-flash">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Görünen Ad:</label>
+          <input id="modal-model-name" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800" placeholder="Gemini 3.8 Flash">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Açıklama / Not:</label>
+          <input id="modal-model-desc" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800" placeholder="Hızlı ve güçlü model...">
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button onclick="closeModelModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs hover:bg-slate-200 transition">İptal</button>
+        <button onclick="saveModelFromModal()" class="px-5 py-2 rounded-xl bg-[#003366] text-white font-bold text-xs hover:bg-[#002244] transition shadow-sm">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST BİLDİRİM KONTEYNERİ -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+  <!-- Client Script -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
