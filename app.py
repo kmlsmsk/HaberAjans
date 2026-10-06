@@ -226,7 +226,17 @@ class DocxExportRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def serve_home(request: Request):
     """Ana SPA Web Arayüzünü sunar."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    index_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    return HTMLResponse("<h1>HaberCiM - Ege Ajans AI Platformu</h1>")
+
+@app.get("/favicon.ico")
+async def favicon():
+    icon_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")
+    if os.path.exists(icon_path):
+        return FileResponse(icon_path, media_type="image/png")
+    return JSONResponse(status_code=204, content=None)
 
 @app.get("/api/health")
 async def health_check():
