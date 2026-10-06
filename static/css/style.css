@@ -1,4 +1,6 @@
-/* HaberCiM - Ege Ajans AI Medya Asistanı Stilleri */
+/* HaberCiM - Akıllı Haber Üretim & AI Medya Asistanı Stilleri */
+/* Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi) */
+
 :root {
   --ege-navy: #003366;
   --ege-cyan: #00A3E0;
@@ -49,8 +51,8 @@ h1, h2, h3, h4, h5, h6, .brand-font {
 }
 
 /* Prompter Stilleri */
-.prompter-mirror {
-  transform: scaleX(-1);
+.prompter-mirror, .prompter-mirrored {
+  transform: scaleX(-1) !important;
 }
 
 .eye-line-marker {
