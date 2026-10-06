@@ -16,7 +16,7 @@ import docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-# Google GenAI SDK
+# Google GenAI Resmi SDK
 try:
     from google import genai
     from google.genai import types
@@ -54,18 +54,27 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 
 FALLBACK_MODELS = [
     "gemini-2.5-flash",
-    "gemini-3.1-pro-preview",
-    "gemini-3.8-flash",
-    "gemini-3-flash-preview",
     "gemini-2.0-flash",
-    "gemini-1.5-flash"
+    "gemini-1.5-flash",
+    "gemini-3.8-flash",
+    "gemini-3.1-pro-preview",
+    "gemini-3-flash-preview"
 ]
 
 MODEL_ALIASES = {
-    "gemini-2.5-pro": "gemini-3.1-pro-preview",
-    "gemini-1.5-pro": "gemini-3.1-pro-preview",
-    "gemini-pro": "gemini-2.5-flash"
+    "gemini-2.5-pro": "gemini-2.5-flash",
+    "gemini-1.5-pro": "gemini-2.5-flash",
+    "gemini-pro": "gemini-2.5-flash",
+    "flash": "gemini-2.5-flash",
+    "pro": "gemini-2.5-flash"
 }
+
+def clean_model_id(model_id: Optional[str]) -> str:
+    """Model ismindeki fazlalıkları temizler ve güncel modele yönlendirir."""
+    if not model_id:
+        return DEFAULT_MODEL
+    m = model_id.replace("models/", "").strip()
+    return MODEL_ALIASES.get(m, m)
 
 # ---------------------------------------------------------
 # YARDIMCI GEMINI ÇAĞRI MOTORU (SDK + REST FALLBACK)
@@ -83,12 +92,10 @@ def execute_gemini_call(
     clean_stars: bool = False
 ) -> dict:
     if not api_key or not api_key.strip():
-        return {"success": False, "error": "API Anahtarı bulunamadı. Lütfen Ayarlar sekmesinden Gemini API anahtarınızı girin."}
+        return {"success": False, "error": "API Anahtarı bulunamadı. Lütfen Ayarlar sekmesinden geçerli bir Google Gemini API anahtarı girin."}
 
     user_api_key = api_key.strip()
-    primary_model = (model or DEFAULT_MODEL).strip()
-    # Alias kontrolü
-    primary_model = MODEL_ALIASES.get(primary_model, primary_model)
+    primary_model = clean_model_id(model)
 
     models_to_try = [primary_model]
     for fb in FALLBACK_MODELS:
@@ -98,6 +105,8 @@ def execute_gemini_call(
     last_error = ""
 
     for target_model in models_to_try:
+        clean_target = clean_model_id(target_model)
+
         # 1. YÖNTEM: Google GenAI Resmi SDK İstemcisi
         if GENAI_SDK_AVAILABLE:
             try:
@@ -122,7 +131,7 @@ def execute_gemini_call(
                 config = types.GenerateContentConfig(**config_args)
 
                 response = client.models.generate_content(
-                    model=target_model,
+                    model=clean_target,
                     contents=contents,
                     config=config
                 )
@@ -134,12 +143,12 @@ def execute_gemini_call(
                     return {
                         "success": True,
                         "text": res_text,
-                        "used_model": target_model
+                        "used_model": clean_target
                     }
             except Exception as sdk_e:
-                last_error = f"{target_model} (SDK): {str(sdk_e)}"
+                last_error = f"{clean_target}: {str(sdk_e)}"
 
-        # 2. YÖNTEM: REST API Fallback (v1beta & v1)
+        # 2. YÖNTEM: Standart Google REST API Fallback (v1beta & v1)
         rest_parts = []
         if audio_bytes and audio_mime:
             rest_parts.append({
@@ -168,7 +177,7 @@ def execute_gemini_call(
 
         for ver in ["v1beta", "v1"]:
             try:
-                url = f"https://generativelanguage.googleapis.com/{ver}/models/{target_model}:generateContent?key={user_api_key}"
+                url = f"https://generativelanguage.googleapis.com/{ver}/models/{clean_target}:generateContent?key={user_api_key}"
                 res = requests.post(url, json=rest_payload, headers={"Content-Type": "application/json"}, timeout=90)
                 if res.status_code == 200:
                     data = res.json()
@@ -182,17 +191,17 @@ def execute_gemini_call(
                             return {
                                 "success": True,
                                 "text": text,
-                                "used_model": target_model
+                                "used_model": clean_target
                             }
                 else:
                     try:
                         err_data = res.json()
                         err_msg = err_data.get("error", {}).get("message", f"HTTP {res.status_code}")
-                        last_error = f"{target_model}: {err_msg}"
+                        last_error = f"{clean_target}: {err_msg}"
                     except Exception:
-                        last_error = f"{target_model}: HTTP {res.status_code}"
+                        last_error = f"{clean_target}: HTTP {res.status_code}"
             except Exception as req_e:
-                last_error = f"{target_model}: {str(req_e)}"
+                last_error = f"{clean_target}: {str(req_e)}"
 
     return {"success": False, "error": f"Gemini API çağrısı başarısız oldu:\n{last_error}"}
 
@@ -365,7 +374,8 @@ async def health_check():
 @app.post("/api/validate-key")
 async def validate_api_key(req: ApiKeyValidateRequest):
     try:
-        url = f"{GEMINI_BASE_URL}/models?key={req.api_key.strip()}"
+        clean_key = req.api_key.strip()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={clean_key}"
         res = requests.get(url, timeout=10)
         if res.status_code == 200:
             return {"valid": True, "message": "API Anahtarı geçerli ve Google Gemini ile bağlantı kuruldu!"}
@@ -376,15 +386,18 @@ async def validate_api_key(req: ApiKeyValidateRequest):
 @app.post("/api/fetch-models")
 async def fetch_remote_models(req: ApiKeyValidateRequest):
     try:
-        url = f"{GEMINI_BASE_URL}/models?key={req.api_key.strip()}"
+        clean_key = req.api_key.strip()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={clean_key}"
         res = requests.get(url, timeout=10)
         if res.status_code == 200:
             data = res.json()
             models = [
                 m["name"].replace("models/", "")
                 for m in data.get("models", [])
-                if "gemini" in m.get("name", "")
+                if "gemini" in m.get("name", "") and "generateContent" in m.get("supportedGenerationMethods", [])
             ]
+            if not models:
+                models = [m["name"].replace("models/", "") for m in data.get("models", []) if "gemini" in m.get("name", "")]
             return {"success": True, "models": models}
         return {"success": False, "error": f"Modeller listelenemedi (HTTP {res.status_code})"}
     except Exception as e:

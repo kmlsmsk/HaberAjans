@@ -367,9 +367,9 @@ async function testApiKey() {
     });
     const data = await res.json();
     if (data.valid) {
-      showToast(data.message, 'success');
+      showToast('✅ Gemini API Anahtarı geçerli ve Gemini 2.5 Flash ile kullanıma hazır!', 'success');
     } else {
-      showToast(data.message, 'error');
+      showToast(`❌ ${data.message}`, 'error');
     }
   } catch (e) {
     showToast(`Test hatası: ${e.message}`, 'error');
@@ -955,5 +955,14 @@ async function exportDocx(elementId, defaultTitle = 'HaberCiM_Belge', isTv = fal
 }
 
 function setupEventListeners() {
-  // Global event listener'lar
+  ['audio-model-select', 'news-model-select', 'tv-model-select', 'editorial-model-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        const mod = id.split('-')[0];
+        AppState.moduleModels[mod] = e.target.value;
+        localStorage.setItem('habercim_module_models', JSON.stringify(AppState.moduleModels));
+      });
+    }
+  });
 }
