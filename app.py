@@ -45,11 +45,18 @@ DEFAULT_RECTOR = "Prof. Dr. Musa ALCI"
 
 FALLBACK_MODELS = [
     "gemini-2.5-flash",
+    "gemini-3.1-pro-preview",
     "gemini-3.8-flash",
-    "gemini-1.5-flash",
+    "gemini-3-flash-preview",
     "gemini-2.0-flash",
-    "gemini-2.5-pro",
+    "gemini-1.5-flash"
 ]
+
+MODEL_ALIASES = {
+    "gemini-2.5-pro": "gemini-3.1-pro-preview",
+    "gemini-1.5-pro": "gemini-3.1-pro-preview",
+    "gemini-pro": "gemini-2.5-flash"
+}
 
 # ---------------------------------------------------------
 # YARDIMCI GEMINI API FONKSİYONLARI
@@ -58,7 +65,16 @@ def call_gemini_api(api_key: str, primary_model: str, payload: dict, clean_stars
     if not api_key:
         return {"success": False, "error": "API Anahtarı bulunamadı. Lütfen Ayarlar sekmesinden Gemini API anahtarınızı girin."}
 
-    models_to_try = [primary_model] + [m for m in FALLBACK_MODELS if m != primary_model]
+    # Eski / kullanımdan kalkan modelleri otomatik en güncele yönlendir
+    mapped_primary = MODEL_ALIASES.get(primary_model, primary_model)
+    
+    models_to_try = [mapped_primary]
+    if primary_model != mapped_primary:
+        models_to_try.append(primary_model)
+    for m in FALLBACK_MODELS:
+        if m not in models_to_try:
+            models_to_try.append(m)
+
     last_error = ""
 
     for model in models_to_try:
@@ -80,7 +96,7 @@ def call_gemini_api(api_key: str, primary_model: str, payload: dict, clean_stars
                             "text": text.strip(),
                             "used_model": model
                         }
-                last_error = "Modelden boş içerik döndü."
+                last_error = f"{model}: Modelden boş içerik döndü."
             else:
                 try:
                     err_json = response.json()
@@ -212,7 +228,7 @@ class EditorialCheckRequest(BaseModel):
     api_key: str
     news_text: str
     rector_name: Optional[str] = DEFAULT_RECTOR
-    model: Optional[str] = "gemini-2.5-pro"
+    model: Optional[str] = "gemini-3.1-pro-preview"
 
 class DocxExportRequest(BaseModel):
     title: str
@@ -310,15 +326,15 @@ Kurallar:
     base64_data = base64.b64encode(raw_bytes).decode("utf-8")
 
     payload = {
-        "system_instruction": {
+        "systemInstruction": {
             "parts": [{"text": system_prompt}]
         },
         "contents": [
             {
                 "parts": [
                     {
-                        "inline_data": {
-                            "mime_type": final_mime,
+                        "inlineData": {
+                            "mimeType": final_mime,
                             "data": base64_data
                         }
                     },
@@ -366,8 +382,8 @@ Referans / Kaynak Bağlantı: {req.reference_url or "Belirtilmedi"}
     if req.image_base64 and req.image_mime_type:
         clean_b64 = req.image_base64.split(",")[1] if "," in req.image_base64 else req.image_base64
         parts.append({
-            "inline_data": {
-                "mime_type": req.image_mime_type,
+            "inlineData": {
+                "mimeType": req.image_mime_type,
                 "data": clean_b64
             }
         })
@@ -470,7 +486,7 @@ Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
         "generationConfig": {"temperature": 0.2}
     }
 
-    result = call_gemini_api(api_key=req.api_key, primary_model=req.model or "gemini-2.5-pro", payload=payload)
+    result = call_gemini_api(api_key=req.api_key, primary_model=req.model or "gemini-3.1-pro-preview", payload=payload)
     
     if result.get("success"):
         raw_text = result.get("text", "")

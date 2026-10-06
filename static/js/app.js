@@ -3,30 +3,45 @@
  * Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)
  */
 
-// Varsayılan Model Listesi
+// Varsayılan Model Listesi (Google Gemini Resmi API Modelleri)
 const DEFAULT_MODELS = [
-  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', desc: 'En yeni nesil, ultra hızlı ve yüksek zeka (Önerilen)', isCustom: false },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Hızlı, stabil ve yüksek doğruluklu haber modeli (Önerilen)', isCustom: false },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', desc: 'En gelişmiş editoryal denetim ve derin muhakeme', isCustom: false },
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', desc: 'Ultra hızlı ve yeni nesil zeka modeli', isCustom: false },
   { id: 'gemini-3.8-live', name: 'Gemini 3.8 Live', desc: 'Gerçek zamanlı dinamik ses/metin akış modeli', isCustom: false },
   { id: 'gemini-3.8-live-extended-thinking', name: 'Gemini 3.8 Live (Extended Thinking)', desc: 'Genişletilmiş akıl yürütme ve derin analiz', isCustom: false },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Yüksek doğruluk, hızlı yanıt ve haber işleme', isCustom: false },
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', desc: 'Gelişmiş editoryal denetim ve derin muhakeme', isCustom: false },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', desc: 'Yeni nesil multimodal ve ses önizleme modeli', isCustom: false },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Hızlı ve kararlı temel üretim modeli', isCustom: false },
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', desc: 'Geniş bağlam ve güvenilir ses çözümleme', isCustom: false },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', desc: 'Kapsamlı bağlam pencereli profesyonel model', isCustom: false }
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', desc: 'Geniş bağlam ve güvenilir ses çözümleme', isCustom: false }
 ];
+
+// Model İsim Göçü (Eski/Kullanımdan kalkan modelleri otomatik güncelle)
+function sanitizeModelId(modelId) {
+  if (!modelId) return 'gemini-2.5-flash';
+  if (modelId === 'gemini-2.5-pro' || modelId === 'gemini-1.5-pro') return 'gemini-3.1-pro-preview';
+  if (modelId === 'gemini-pro') return 'gemini-2.5-flash';
+  return modelId;
+}
+
+let storedModuleModels = {};
+try {
+  storedModuleModels = JSON.parse(localStorage.getItem('habercim_module_models') || '{}');
+} catch (e) {
+  storedModuleModels = {};
+}
 
 // Uygulama Durumu (State)
 const AppState = {
   apiKey: localStorage.getItem('habercim_api_key') || '',
   rectorName: localStorage.getItem('habercim_rector_name') || 'Prof. Dr. Musa ALCI',
-  models: JSON.parse(localStorage.getItem('habercim_models_v2') || JSON.stringify(DEFAULT_MODELS)),
-  moduleModels: JSON.parse(localStorage.getItem('habercim_module_models') || JSON.stringify({
-    global: 'gemini-2.5-flash',
-    audio: 'gemini-2.5-flash',
-    news: 'gemini-2.5-flash',
-    tv: 'gemini-2.5-flash',
-    editorial: 'gemini-2.5-pro'
-  })),
+  models: DEFAULT_MODELS,
+  moduleModels: {
+    global: sanitizeModelId(storedModuleModels.global || 'gemini-2.5-flash'),
+    audio: sanitizeModelId(storedModuleModels.audio || 'gemini-2.5-flash'),
+    news: sanitizeModelId(storedModuleModels.news || 'gemini-2.5-flash'),
+    tv: sanitizeModelId(storedModuleModels.tv || 'gemini-2.5-flash'),
+    editorial: sanitizeModelId(storedModuleModels.editorial || 'gemini-3.1-pro-preview')
+  },
   currentView: 'dashboard',
   recording: {
     isRecording: false,
