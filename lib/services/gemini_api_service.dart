@@ -48,9 +48,7 @@ class GeminiApiService {
             ?.map((m) => (m['name'] as String).replaceFirst('models/', ''))
             .where((name) =>
                 name.contains('gemini') &&
-                !name.contains('1.5') &&
-                !name.contains('pro') &&
-                !name.contains('3.8'))
+                !name.contains('1.5'))
             .toList();
         return models ?? [];
       }

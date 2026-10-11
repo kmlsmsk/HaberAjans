@@ -57,26 +57,199 @@ class GeminiModelOption {
 }
 
 class GeminiModelConfig {
-  /// Yalnızca çalışan, güncel ve resmi Flash modelleri varsayılan olarak sunulur
+  /// Kullanıcının talep ettiği tüm güncel modeller (Gemini 2.5, 3.x, Nano Banana, Transcribe, Live, TTS vb.)
   static const List<GeminiModelOption> defaultBuiltInModels = [
+    // 1. VARSAYILAN & ÖNERİLEN MODEL
     GeminiModelOption(
       id: 'gemini-2.5-flash',
       name: 'Gemini 2.5 Flash',
-      description: 'En güncel, ultra hızlı ve hatasız çok modlu yapay zeka (Varsayılan & Önerilen)',
+      description: 'Düşük gecikme süresi, yüksek hacimli ve akıl yürütme için en iyi fiyat-performans modeli (Varsayılan & Önerilen)',
       isAudioSupported: true,
       isVisionSupported: true,
     ),
+    // 2. GEMINI 2.5 AİLESİ
+    GeminiModelOption(
+      id: 'gemini-2.5-flash-lite',
+      name: 'Gemini 2.5 Flash-Lite',
+      description: '2.5 ailesindeki en hızlı ve en uygun fiyatlı çok formatlı model',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-2.5-flash-native-audio-preview-12-2025',
+      name: 'Gemini 2.5 Flash Live',
+      description: 'Bir saniyeden kısa sürede doğal ses akışı sağlayan, gerçek zamanlı optimize model',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-2.5-flash-preview-tts',
+      name: 'Gemini 2.5 Flash TTS',
+      description: 'Stil ve hız üzerinde hassas kontrol sağlayan metin okuma ses üretimi',
+      isAudioSupported: true,
+      isVisionSupported: false,
+    ),
+    GeminiModelOption(
+      id: 'gemini-2.5-flash-image',
+      name: 'Nano Banana (2.5 Flash Image)',
+      description: 'Hızlı ve yaratıcı iş akışları için son teknoloji yerel görüntü üretme ve düzenleme',
+      isAudioSupported: false,
+      isVisionSupported: true,
+    ),
+
+    // 3. GEMINI 3.8 AİLESİ
+    GeminiModelOption(
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
+      description: 'Son teknoloji yüksek hızlı akıl yürütme ve genel üretim modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.8-live',
+      name: 'Gemini 3.8 Live',
+      description: 'Gerçek zamanlı iki yönlü canlı etkileşim ve çok modlu oturum modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.8-live-extended-thinking',
+      name: 'Gemini 3.8 Live Extended Thinking',
+      description: 'Genişletilmiş derin düşünme ve karmaşık analiz yetenekli canlı model',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.8-flash-tts',
+      name: 'Gemini 3.8 Flash TTS',
+      description: 'Yüksek kaliteli, akıcı ve doğal ses sentezleme modeli',
+      isAudioSupported: true,
+      isVisionSupported: false,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.8-flash-lite-tts',
+      name: 'Gemini 3.8 Flash-Lite TTS',
+      description: 'Düşük gecikmeli ve ultra hafif metin seslendirme modeli',
+      isAudioSupported: true,
+      isVisionSupported: false,
+    ),
+
+    // 4. GEMINI 3.6 & 3.5 MODELLERİ
+    GeminiModelOption(
+      id: 'gemini-3.6-flash',
+      name: 'Gemini 3.6 Flash',
+      description: 'Dengeli, kararlı ve yeni nesil çok modlu Flash modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.5-flash-lite',
+      name: 'Gemini 3.5 Flash-Lite',
+      description: 'Ultra hafif, yüksek hacimli ve verimli yeni nesil üretim modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.5-transcribe',
+      name: 'Gemini 3.5 Transcribe',
+      description: 'Ses çözümleme ve röportaj deşifresi için optimize edilmiş uzman model',
+      isAudioSupported: true,
+      isVisionSupported: false,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.5-transcribe-live',
+      name: 'Gemini 3.5 Transcribe Live',
+      description: 'Gerçek zamanlı kesintisiz canlı ses deşifresi ve metne dönüştürme',
+      isAudioSupported: true,
+      isVisionSupported: false,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.5-live-translate-preview',
+      name: 'Gemini 3.5 Live Translate',
+      description: 'Eşzamanlı canlı çeviri, diller arası aktarım ve haber lokalizasyonu',
+      isAudioSupported: true,
+      isVisionSupported: false,
+    ),
+
+    // 5. GEMINI 3.1 & 3.0 MODELLERİ
+    GeminiModelOption(
+      id: 'gemini-3.1-flash-lite',
+      name: 'Gemini 3.1 Flash-Lite',
+      description: 'Düşük kaynak tüketimli hızlı üretim modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.1-flash-live-preview',
+      name: 'Gemini 3.1 Flash Live',
+      description: 'Canlı çok modlu etkileşim önizleme modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.1-flash-tts-preview',
+      name: 'Gemini 3.1 Flash TTS',
+      description: 'Hızlı seslendirme ve konuşma önizleme modeli',
+      isAudioSupported: true,
+      isVisionSupported: false,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3-flash-preview',
+      name: 'Gemini 3 Flash Preview',
+      description: 'Gemini 3 nesli önizleme Flash modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.1-pro-preview',
+      name: 'Gemini 3.1 Pro Preview',
+      description: 'Gelişmiş mantıksal akıl yürütme ve derin editoryal analiz modeli',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-omni-1.1-flash',
+      name: 'Gemini Omni Flash (1.1)',
+      description: 'Çok formatlı omni mimarisi ile ses, metin ve görsel entegrasyonu',
+      isAudioSupported: true,
+      isVisionSupported: true,
+    ),
+
+    // 6. NANO BANANA GÖRSEL & MULTIMODAL AİLESİ
+    GeminiModelOption(
+      id: 'gemini-nano-banana-2.1',
+      name: 'Nano Banana 2.1',
+      description: 'Kompakt, verimli yerel multimodal ve yaratıcı içerik modeli',
+      isAudioSupported: false,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.1-flash-image',
+      name: 'Nano Banana 2 (3.1 Flash Image)',
+      description: 'Hızlı görsel üretme, düzenleme ve görsel anlama modeli',
+      isAudioSupported: false,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3.1-flash-lite-image',
+      name: 'Nano Banana 2 Lite (3.1 Lite Image)',
+      description: 'Hafif ve hızlı görsel işleme modeli',
+      isAudioSupported: false,
+      isVisionSupported: true,
+    ),
+    GeminiModelOption(
+      id: 'gemini-3-pro-image',
+      name: 'Nano Banana Pro (3 Pro Image)',
+      description: 'Profesyonel düzeyde yüksek kaliteli görüntü analizi ve üretimi',
+      isAudioSupported: false,
+      isVisionSupported: true,
+    ),
+
+    // 7. GEMINI 2.0 FLASH (Kararlı temel)
     GeminiModelOption(
       id: 'gemini-2.0-flash',
       name: 'Gemini 2.0 Flash',
-      description: 'Hızlı, dengeli ve kararlı yeni nesil üretim modeli',
-      isAudioSupported: true,
-      isVisionSupported: true,
-    ),
-    GeminiModelOption(
-      id: 'gemini-2.0-flash-lite',
-      name: 'Gemini 2.0 Flash-Lite',
-      description: 'Düşük gecikmeli, ultra hafif ve yüksek verimli Flash modeli',
+      description: 'Hızlı, dengeli ve kararlı üretim modeli',
       isAudioSupported: true,
       isVisionSupported: true,
     ),
@@ -88,21 +261,16 @@ class GeminiModelConfig {
   static const String defaultTvModel = 'gemini-2.5-flash';
   static const String defaultEditorialModel = 'gemini-2.5-flash';
 
-  // Kullanımdan kalkan, desteklenmeyen veya uyumsuz modelleri güvenli Flash 2.5'e yönlendiren harita
+  // Yalnızca kullanımdan kalkan eski sürümleri güvenli varsayılan modele yönlendiren harita
   static const Map<String, String> legacyModelAliases = {
     'gemini-1.5-flash': 'gemini-2.5-flash',
     'gemini-1.5-pro': 'gemini-2.5-flash',
-    'gemini-2.5-pro': 'gemini-2.5-flash',
     'gemini-pro': 'gemini-2.5-flash',
-    'gemini-3.8-flash': 'gemini-2.5-flash',
-    'gemini-3.8-live': 'gemini-2.5-flash',
-    'gemini-3.8-live-extended-thinking': 'gemini-2.5-flash',
-    'gemini-3-flash-preview': 'gemini-2.5-flash',
     'flash': 'gemini-2.5-flash',
-    'pro': 'gemini-2.5-flash',
   };
 
-  /// Model ID'sini temizler ve eski/geçersiz modelleri doğrudan varsayılan Flash 2.5'e yönlendirir
+  /// Model ID'sini temizler. Eski kullanımdan kalkmış 1.5 modellerini varsayılan Flash 2.5'e taşır,
+  /// kullanıcının seçtiği 2.5, 3.x, Nano Banana ve özel modelleri olduğu gibi korur.
   static String sanitizeModel(String? modelId) {
     if (modelId == null || modelId.trim().isEmpty) {
       return defaultGlobalModel;
@@ -110,29 +278,29 @@ class GeminiModelConfig {
     final clean = modelId.replaceAll('models/', '').trim();
     final lower = clean.toLowerCase();
 
-    // Eski/kullanımdan kalkmış alias'lar
     if (legacyModelAliases.containsKey(lower)) {
       return legacyModelAliases[lower]!;
     }
 
-    // "pro" içeren eski modelleri varsayılana çek, ancak kullanıcı özel eklemişse koru
-    if (lower == 'gemini-1.5-pro' || lower == 'gemini-2.5-pro' || lower == 'gemini-pro') {
+    if (lower == 'gemini-1.5-pro' || lower == 'gemini-pro') {
       return defaultGlobalModel;
     }
 
     return clean;
   }
 
-  /// Güvenilir Fallback zinciri (Sadece çalışan Flash modelleri)
+  /// Güvenilir Fallback zinciri
   static List<String> getFallbackModels(String preferredModel) {
     final sanitized = sanitizeModel(preferredModel);
     final list = <String>[sanitized];
-    const flashBackups = [
+    const generalBackups = [
       'gemini-2.5-flash',
+      'gemini-3.8-flash',
+      'gemini-3.5-flash-lite',
       'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
+      'gemini-2.5-flash-lite',
     ];
-    for (final b in flashBackups) {
+    for (final b in generalBackups) {
       if (!list.contains(b)) {
         list.add(b);
       }

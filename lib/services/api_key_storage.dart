@@ -9,7 +9,7 @@ class ApiKeyStorage {
   static const String _keyNewsModel = 'habervar_gemini_news_model';
   static const String _keyTvModel = 'habervar_gemini_tv_model';
   static const String _keyEditorialModel = 'habervar_gemini_editorial_model';
-  static const String _keyModelsJson = 'habervar_gemini_models_v4';
+  static const String _keyModelsJson = 'habervar_gemini_models_v5';
 
   // Kurumsal Parametreler
   static const String _keyUniversityName = 'habervar_university_name';
@@ -114,10 +114,7 @@ class ApiKeyStorage {
         final loaded = list
             .map((item) => GeminiModelOption.fromJson(item as Map<String, dynamic>))
             .where((m) =>
-                m.isCustom ||
-                (!m.id.toLowerCase().contains('1.5') &&
-                 !m.id.toLowerCase().contains('pro') &&
-                 !m.id.toLowerCase().contains('3.8')))
+                m.isCustom || !m.id.toLowerCase().contains('1.5'))
             .toList();
 
         // Eğer dahili default modellerden eksik olan varsa başa ekle
