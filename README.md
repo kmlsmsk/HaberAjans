@@ -1,7 +1,7 @@
-# 🎙️ HaberCiM - Ege Üniversitesi Ege Ajans Yapay Zeka Haber Üretim & Ses Çözümleme Platformu
+# 🎙️ HaberVAR - Yapay Zeka Haber Üretim & Ses Çözümleme Platformu
 
 **Geliştirici:** Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)  
-**Tasarım & Mimari:** Ege Üniversitesi Kurumsal Kimliğine Uygun Full-Stack Web Uygulaması  
+**Tasarım & Mimari:** Kurumsal Kimliğe Uygun Full-Stack Web Uygulaması  
 
 ---
 
@@ -12,9 +12,9 @@
    - Google Gemini yapay zeka modelleri ile tam doğrulukta deşifre ve imla düzeltme.
    - Formatlı **Word (.docx)** çıktısı alma.
 
-2. **📰 Ege Ajans Haber Yazarı:**
+2. **📰 Ajans Haber Yazarı:**
    - Ham notlar, taslak metin, referans web bağlantısı ve fotoğraf/belge yükleme desteği (Multimodal).
-   - Ege Üniversitesi resmi basın bülteni formatına tam uyum (`İZMİR (Ege Ajans) -`, Rektör demeci, 5N1K ve Ters Piramit kuralı).
+   - Resmi basın bülteni formatına tam uyum
    - Tek tıkla haber oluşturma ve Word (.docx) raporu indirme.
 
 3. **📺 TV Haber Formatı & Teleprompter:**
@@ -77,6 +77,6 @@ git push -u origin main
 ---
 
 ## 👨‍💻 Künye
-- **Proje:** HaberCiM - Ege Ajans Akıllı Haber Platformu
+- **Proje:** HaberVAR - Akıllı Haber Platformu
 - **Geliştirici:** Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)
 - **Telif Hakları:** © 2026
