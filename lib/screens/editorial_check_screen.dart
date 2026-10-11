@@ -61,7 +61,7 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
     final agency = await ApiKeyStorage.getAgencyName();
     if (mounted) {
       setState(() {
-        _selectedModel = model;
+        _selectedModel = GeminiModelConfig.sanitizeModel(model);
         _agencyName = agency;
       });
     }
@@ -130,7 +130,7 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
     }
   }
 
-  // --- KAYDETME & GÜNCELLEME ---
+  // --- KAYDETME & GÜNCELLEME (SADECE NİHAİ HABERİ KAYDEDER) ---
   Future<void> _saveOrUpdateNews(String content, String report) async {
     if (content.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,28 +148,22 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
       }
     }
 
-    final titleController = TextEditingController(
-      text: _currentLoadedItem != null ? _currentLoadedItem!.title : defaultTitle,
-    );
-
     final isUpdating = _currentLoadedItem != null;
+    final titleController = TextEditingController(text: isUpdating ? _currentLoadedItem!.title : defaultTitle);
 
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(isUpdating ? 'Haberi Güncelle' : 'Nihai Haberi Kaydet'),
+        title: Text(isUpdating ? 'Nihai Haberi Güncelle' : 'Nihai Haberi Kaydet'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Haber Başlığı:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const Text('Haber Başlığı:', style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 6),
             TextField(
               controller: titleController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Haber başlığını girin',
-              ),
+              decoration: const InputDecoration(border: OutlineInputBorder()),
             ),
           ],
         ),
@@ -209,7 +203,7 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isUpdating ? 'Haber başarıyla güncellendi!' : 'Haber başarıyla kaydedildi!'),
+            content: Text(isUpdating ? 'Nihai haber güncellendi!' : 'Nihai haber başarıyla kaydedildi!'),
             backgroundColor: Colors.green.shade700,
           ),
         );
@@ -237,27 +231,21 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
+                    const Row(
                       children: [
-                        const Icon(Icons.folder_special, color: Color(0xFF003366)),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Kayıtlı Nihai Haberler (${_savedNewsList.length})',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
+                        Icon(Icons.inventory_2_outlined, color: Color(0xFF003366)),
+                        SizedBox(width: 8),
+                        Text('Kayıtlı Nihai Haberler', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                   ],
                 ),
                 const Divider(),
                 if (_savedNewsList.isEmpty)
                   const Expanded(
                     child: Center(
-                      child: Text('Henüz kaydedilmiş bir nihai haber bulunmuyor.'),
+                      child: Text('Henüz kaydedilmiş nihai haber bulunmuyor.', style: TextStyle(color: Colors.grey)),
                     ),
                   )
                 else
@@ -265,71 +253,27 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                     child: ListView.separated(
                       itemCount: _savedNewsList.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, idx) {
+                      itemBuilder: (c, idx) {
                         final item = _savedNewsList[idx];
                         final dateStr = DateFormat('dd.MM.yyyy HH:mm').format(item.updatedAt);
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xFF003366).withAlpha(30),
-                            child: const Icon(Icons.article, color: Color(0xFF003366)),
-                          ),
-                          title: Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                          subtitle: Text('Son Güncelleme: $dateStr', style: const TextStyle(fontSize: 11)),
+                          title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          subtitle: Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                                tooltip: 'Haberi Sil',
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (c) => AlertDialog(
-                                      title: const Text('Haberi Sil'),
-                                      content: Text('"${item.title}" başlıklı haberi silmek istediğinize emin misiniz?'),
-                                      actions: [
-                                        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('İptal')),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                          onPressed: () => Navigator.pop(c, true),
-                                          child: const Text('Sil', style: TextStyle(color: Colors.white)),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-
-                                  if (confirm == true) {
-                                    await SavedContentService.deleteNews(item.id);
-                                    final updated = await SavedContentService.getSavedNews();
-                                    setSheetState(() {
-                                      _savedNewsList = updated;
-                                    });
-                                    setState(() {
-                                      _savedNewsList = updated;
-                                      if (_currentLoadedItem?.id == item.id) {
-                                        _currentLoadedItem = null;
-                                      }
-                                    });
-                                  }
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.file_open, color: Color(0xFF003366), size: 20),
-                                tooltip: 'Haberi Yükle',
+                                icon: const Icon(Icons.open_in_new, color: Color(0xFF00A3E0)),
+                                tooltip: 'Yükle',
                                 onPressed: () {
                                   Navigator.pop(ctx);
                                   setState(() {
                                     _currentLoadedItem = item;
+                                    _newsTextController.text = item.content;
                                     _result = GeminiResponseResult(
                                       isSuccess: true,
                                       text: item.content,
-                                      usedModel: _selectedModel,
+                                      usedModel: 'Kayıtlı Veri',
                                       structuredSections: {
                                         'report': item.report,
                                         'changelog': '',
@@ -337,12 +281,23 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                                       },
                                     );
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('"${item.title}" yüklendi.'),
-                                      backgroundColor: const Color(0xFF003366),
-                                    ),
-                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                tooltip: 'Sil',
+                                onPressed: () async {
+                                  await SavedContentService.deleteNews(item.id);
+                                  final updated = await SavedContentService.getSavedNews();
+                                  setSheetState(() {
+                                    _savedNewsList = updated;
+                                  });
+                                  setState(() {
+                                    _savedNewsList = updated;
+                                    if (_currentLoadedItem?.id == item.id) {
+                                      _currentLoadedItem = null;
+                                    }
+                                  });
                                 },
                               ),
                             ],
@@ -371,10 +326,9 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
     setState(() {
       _isChecking = true;
       _result = null;
-      _currentLoadedItem = null;
     });
 
-    final res = await GeminiApiService.checkEditorialAndStyle(
+    final res = await GeminiApiService.editorialCheck(
       newsText: text,
       preferredModel: _selectedModel,
     );
@@ -390,22 +344,18 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final sections = _result?.structuredSections;
-    final report = sections?['report'] ?? '';
-    final changelog = sections?['changelog'] ?? '';
-    final editedText = sections?['editedText'] ?? '';
+    final structured = _result?.structuredSections;
+    final report = structured?['report'] ?? '';
+    final changelog = structured?['changelog'] ?? '';
+    final editedText = structured?['editedText'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dil, Üslup & Editoryal Denetim'),
+        title: Text('$_agencyName Editoryal Denetim'),
         actions: [
           IconButton(
-            tooltip: 'Kayıtlı Haberler (${_savedNewsList.length})',
-            icon: Badge(
-              label: Text('${_savedNewsList.length}'),
-              isLabelVisible: _savedNewsList.isNotEmpty,
-              child: const Icon(Icons.folder_special),
-            ),
+            tooltip: 'Kayıtlı Nihai Haberler',
+            icon: const Icon(Icons.folder_shared_outlined),
             onPressed: _showSavedNewsDialog,
           ),
         ],
@@ -432,16 +382,19 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                   ModelSelectorDropdown(
                     selectedModelId: _selectedModel,
                     moduleType: 'editorial',
-                    onChanged: (model) => setState(() => _selectedModel = model),
+                    onChanged: (model) {
+                      setState(() => _selectedModel = model);
+                      ApiKeyStorage.saveModel('editorial', model);
+                    },
                   ),
                 ],
               ),
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // Haber Metni Girişi
+          // Metin Giriş Kartı
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
@@ -449,16 +402,27 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Denetlenecek Haber Metni',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Denetlenecek Haber Metni',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      IconButton(
+                        tooltip: 'Temizle',
+                        icon: const Icon(Icons.clear_all, size: 20),
+                        onPressed: () => _newsTextController.clear(),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _newsTextController,
-                    maxLines: 7,
-                    decoration: const InputDecoration(
-                      hintText: 'TDK imla, 5N1K ve kurumsal üslup denetimi yapılacak haber metnini buraya yapıştırın...',
+                    maxLines: 8,
+                    decoration: InputDecoration(
+                      hintText: 'Haber metnini buraya yapıştırın...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ],
@@ -477,19 +441,18 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
             onPressed: _isChecking ? null : _checkEditorial,
             icon: _isChecking
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.check_circle_outline),
+                : const Icon(Icons.fact_check),
             label: Text(
-              _isChecking ? 'Metin Denetleniyor...' : '🔍 Metni Denetle & 100 Üzerinden Puanla',
+              _isChecking ? 'Editoryal Denetim Yapılıyor...' : '🔍 Haberi Denetle ve Düzelt',
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
           ),
 
           const SizedBox(height: 20),
 
-          // Sonuç Alanı: 3 Ayrı Kutu
+          // SONUÇ BÖLÜMÜ
           if (_result != null)
             if (_result!.isSuccess) ...[
-              // Aktif Düzenlenen Kayıt Başlığı Bilgisi
               if (_currentLoadedItem != null)
                 Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -519,9 +482,15 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                   ),
                 ),
 
-              // 1. KUTU: DENETİM RAPORU & PUAN
+              // 1. ÖNCELİKLİ ANA KUTU: YAYINA HAZIR SAF NİHAİ HABER METNİ
+              // SADECE BU METİN KOPYALANIR, WORD OLUR, SESLİ OKUNUR, KAYDEDİLİR VE PROMPTER'A GİDER!
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                color: Colors.white,
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: BorderSide(color: Colors.teal.shade400, width: 1.5),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -532,72 +501,37 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.analytics, color: Color(0xFF003366), size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                '1. $_agencyName Denetim Raporu & Karne',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.verified, color: Colors.teal, size: 22),
+                              ),
+                              const SizedBox(width: 10),
+                              const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Yayına Hazır Nihai Haber',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF003366)),
+                                  ),
+                                  Text(
+                                    'Editoryal onaydan geçmiş saf haber metni',
+                                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                          IconButton(
-                            tooltip: 'Raporu Kopyala',
-                            icon: const Icon(Icons.copy, size: 18),
-                            onPressed: () => _copyText(report, 'Denetim Raporu'),
-                          ),
-                        ],
-                      ),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      MarkdownBody(
-                        data: report.isNotEmpty ? report : _result!.text,
-                        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                          p: const TextStyle(fontSize: 13, height: 1.5),
-                          h1: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF003366)),
-                          h2: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF00A3E0)),
-                          h3: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // 2. KUTU: DÜZELTİLMİŞ NİHAİ METİN + KOPYALA + WORD İNDİR + SESLİ OKU + KAYDET/GÜNCELLE/SİL
-              Card(
-                color: Colors.green.shade50.withAlpha(80),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.green.shade300, width: 1.2),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.task_alt, color: Colors.green, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                '2. Yayına Hazır Nihai Metin',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green),
-                              ),
-                            ],
-                          ),
-                          // Hızlı Butonlar: Kopyala, Word İndir, Sesli Oku
-                          Wrap(
-                            spacing: 4,
+                          // Hızlı İşlem İkonları: Kopyala, Word İndir, Sesli Oku
+                          Row(
                             children: [
                               IconButton(
-                                tooltip: 'Metni Kopyala',
-                                icon: const Icon(Icons.copy, size: 19),
-                                onPressed: () => _copyText(editedText, 'Düzeltilmiş Metin'),
+                                tooltip: 'Nihai Haberi Kopyala',
+                                icon: const Icon(Icons.copy, size: 19, color: Color(0xFF003366)),
+                                onPressed: () => _copyText(editedText, 'Nihai Haber'),
                               ),
                               IconButton(
                                 tooltip: 'Word (.docx) İndir',
@@ -608,7 +542,7 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                                 tooltip: _isSpeaking ? 'Sesli Okumayı Durdur' : 'Haberi Sesli Oku',
                                 icon: Icon(
                                   _isSpeaking ? Icons.stop_circle : Icons.volume_up,
-                                  size: 21,
+                                  size: 22,
                                   color: _isSpeaking ? Colors.red : Colors.teal.shade700,
                                 ),
                                 onPressed: () => _toggleSpeech(editedText),
@@ -617,30 +551,41 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                           ),
                         ],
                       ),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      MarkdownBody(
-                        data: editedText.isNotEmpty ? editedText : '*Düzeltilmiş metin üretilemedi.*',
-                        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                          p: const TextStyle(fontSize: 13, height: 1.5),
-                          h1: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF003366)),
-                          h2: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF00A3E0)),
+                      const Divider(height: 18),
+
+                      // Saf Haber Metni Gösterimi
+                      SelectableRegion(
+                        focusNode: FocusNode(),
+                        selectionControls: materialTextSelectionControls,
+                        child: MarkdownBody(
+                          data: editedText.isNotEmpty ? editedText : '*Düzeltilmiş saf metin üretilemedi.*',
+                          styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                            p: const TextStyle(fontSize: 13.5, height: 1.6, color: Color(0xFF0F172A)),
+                            h1: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF003366)),
+                            h2: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF00A3E0)),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
 
-                      // İşlem Butonları Çubuğu: Kaydet / Güncelle / Sil
+                      const SizedBox(height: 16),
+                      const Divider(height: 1),
+                      const SizedBox(height: 12),
+
+                      // EYLEMLER: KAYDET / GÜNCELLE / SİL & TV-PROMPTER'A GÖNDER
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.teal.shade700,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            icon: Icon(_currentLoadedItem != null ? Icons.save_as : Icons.save),
+                            icon: Icon(_currentLoadedItem != null ? Icons.save_as : Icons.save, size: 18),
                             label: Text(_currentLoadedItem != null ? 'Haberi Güncelle' : 'Nihai Haberi Kaydet'),
                             onPressed: () => _saveOrUpdateNews(editedText, report),
                           ),
@@ -650,9 +595,10 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                                 foregroundColor: Colors.red,
                                 side: const BorderSide(color: Colors.red),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               icon: const Icon(Icons.delete_outline, size: 18),
-                              label: const Text('Bu Kaydı Sil'),
+                              label: const Text('Kaydı Sil'),
                               onPressed: () async {
                                 final messenger = ScaffoldMessenger.of(context);
                                 final confirm = await showDialog<bool>(
@@ -684,40 +630,91 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                                 }
                               },
                             ),
-                        ],
-                      ),
 
-                      const SizedBox(height: 12),
-
-                      // Sonraki Akış Adımı: TV & Prompter'a Gönder
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0284C7),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          final target = editedText.isNotEmpty ? editedText : _newsTextController.text;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TvNewsScreen(initialText: target),
+                          // SADECE VE KESİNLİKLE EDİTORYALDEN ÇIKMIŞ SAF HABERİ TV & PROMPTER'A GÖNDERİR!
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF003366),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.tv),
-                        label: const Text('4. Adım: TV & Prompter\'a Gönder', style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              final target = editedText.isNotEmpty ? editedText : _newsTextController.text;
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => TvNewsScreen(initialText: target),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.tv, size: 18),
+                            label: const Text('📺 TV & Prompter\'a Gönder', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              // 3. KUTU: DEĞİŞİKLİKLER VE İYİLEŞTİRMELER
+              // 2. FARKLI KUTU: EDİTORYAL DENETİM RAPORU & KARNE
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.blueGrey.shade200),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.analytics_outlined, color: Color(0xFF003366), size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                '📊 $_agencyName Denetim Raporu & İmla Karnesi',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            tooltip: 'Raporu Kopyala',
+                            icon: const Icon(Icons.copy, size: 18),
+                            onPressed: () => _copyText(report, 'Denetim Raporu'),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      const SizedBox(height: 6),
+                      MarkdownBody(
+                        data: report.isNotEmpty ? report : _result!.text,
+                        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                          p: const TextStyle(fontSize: 13, height: 1.5),
+                          h1: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF003366)),
+                          h2: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF00A3E0)),
+                          h3: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // 3. FARKLI KUTU: YAPILAN DEĞİŞİKLİKLER VE İYİLEŞTİRMELER
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.amber.shade300),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -731,7 +728,7 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                               Icon(Icons.edit_note, color: Colors.orange, size: 22),
                               SizedBox(width: 8),
                               Text(
-                                '3. Yapılan Değişiklikler ve İyileştirmeler',
+                                '✏️ Yapılan İyileştirmeler ve Düzeltmeler',
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                             ],
@@ -744,7 +741,7 @@ class _EditorialCheckScreenState extends State<EditorialCheckScreen> {
                         ],
                       ),
                       const Divider(),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       MarkdownBody(
                         data: changelog.isNotEmpty ? changelog : '*Değişiklik maddesi belirtilmedi.*',
                         styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(

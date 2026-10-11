@@ -46,7 +46,10 @@ class GeminiApiService {
         final data = jsonDecode(response.body);
         final models = (data['models'] as List?)
             ?.map((m) => (m['name'] as String).replaceFirst('models/', ''))
-            .where((name) => name.contains('gemini'))
+            .where((name) =>
+                name.contains('gemini') &&
+                !name.contains('pro') &&
+                !name.contains('3.8'))
             .toList();
         return models ?? [];
       }
@@ -70,16 +73,18 @@ class GeminiApiService {
       );
     }
 
-    final modelToUse = preferredModel ?? await ApiKeyStorage.getModelForModule('audio');
+    final rawModel = preferredModel ?? await ApiKeyStorage.getModelForModule('audio');
+    final modelToUse = GeminiModelConfig.sanitizeModel(rawModel);
 
     const systemPrompt = """Sen bir Türkçe Ses Çözümleme ve Deşifre Uzmanısın.
-Görevin, sana verilen ses kaydını dikkatlice dinleyerek en yüksek doğrulukla Türkçe metne çevirmektir.
-Kurallar:
-1. Sesi tam ve doğru bir şekilde Türkçe metne dök.
-2. Metindeki bariz dil bilgisi, harf ve yazım hatalarını düzelt, akıcılığı sağla.
-3. SADECE nihai, iyileştirilmiş Türkçe metni ver.
-4. Başka hiçbir açıklama, giriş, selamlama veya sonuç cümlesi ekleme.
-5. Metni mantıksal paragraflara ayır.""";
+Görevin, sana verilen ses kaydını dikkatlice dinleyerek bütün metni net ve anlaşılır bir biçimde, düzgün bir dil ve üslup ile Türkçe yazıya dönüştürmektir.
+
+KESİN KURALLAR:
+1. Bütün metni net, açık, anlaşılır ve eksiksiz olarak Türkçe metne dök.
+2. Düzgün bir dil, üslup ve TDK imla akıcılığı sağla.
+3. KESİNLİKLE KELİME EKLEME VE YORUM EKLEME. Konuşmada geçmeyen hiçbir ifadeyi, kişisel fikri veya yorumu metne dahil etme. Aslına %100 sadık kal.
+4. SADECE çözümlenmiş saf metni ver. Giriş cümlesi, selamlama, kapanış, başlık açıklaması veya not EKLEME.
+5. Konuşma akışına göre metni mantıksal paragraflara ayır.""";
 
     final base64Audio = base64Encode(audioBytes);
 
@@ -99,13 +104,13 @@ Kurallar:
               }
             },
             {
-              'text': 'Lütfen bu ses kaydını yukarıdaki kurallara göre harfiyen çözümle ve mantıksal paragraflar halinde yaz.'
+              'text': 'Lütfen bu ses kaydındaki konuşmayı kelime eklemeden, yorum katmadan, net ve anlaşılır düzgün bir Türkçe ile çözümle.'
             }
           ]
         }
       ],
       'generationConfig': {
-        'temperature': 0.2,
+        'temperature': 0.1,
       }
     };
 
@@ -134,7 +139,8 @@ Kurallar:
       );
     }
 
-    final modelToUse = preferredModel ?? await ApiKeyStorage.getModelForModule('news');
+    final rawModel = preferredModel ?? await ApiKeyStorage.getModelForModule('news');
+    final modelToUse = GeminiModelConfig.sanitizeModel(rawModel);
     final universityName = await ApiKeyStorage.getUniversityName();
     final agencyName = await ApiKeyStorage.getAgencyName();
     final rectorName = await ApiKeyStorage.getRectorName();
@@ -142,26 +148,27 @@ Kurallar:
     final portalUrl = await ApiKeyStorage.getPortalUrl();
 
     final prompt = """
-Sen $universityName $agencyName ($portalUrl) Haber Merkezi'nin kıdemli başyazarı ve haber editörüsün.
-Görevin, sana sunulan ham notları, etkinlik bilgilerini ve (varsa) görseli kullanarak $universityName ve $agencyName'ın resmi ve saygın kurumsal yayın çizgisine tam uyumlu, kusursuz bir haber metni yazmaktır.
+Sen $universityName $agencyName ($portalUrl) Haber Merkezi'nin kıdemli başyazarı ve kurumsal haber editörüsün.
+Görevin, sana sunulan ham notları kurumsal haber ajansı ilkelerine tam uyumlu, saygın ve kusursuz bir basın bültenine dönüştürmektir.
 
-${agencyName.toUpperCase()} KURUMSAL HABER FORMATI VE YAZIM STANDARTLARI:
-1. Haber Mimarisi (Ters Piramit & 5N1K Kuralı):
-   - Başlık: '# ' ile başlayan, büyük ve kurumsal haber başlığı. (Örn: # $universityName'nden Bilimsel Atılım)
-   - Spot (Özet): '**' ile kalınlaştırılmış, haberin ana fikrini ve 5N1K unsurlarını özetleyen 1-2 cümlelik vurucu spot.
-   - Mahreç ve Giriş: Haber gövdesinin ilk paragrafı MUTLAKA "**$cityName ($agencyName) -** " ifadesiyle başlamalıdır. Giriş cümlesinde etkinliğin nerede, ne zaman, kimlerin katılımıyla gerçekleştiği net aktarılmalıdır.
-   - Rektör / Yetkili Görüşü: Giriş paragrafını takiben, $universityName Rektörü $rectorName'nın vizyoner açıklamalarına ve demeçlerine yer ver. Demeci tırnak içinde ("...") belirt ve cümlenin sonunu "... dedi", "... ifadelerini kullandı" veya "... şeklinde konuştu" ile bağla.
-   - Ara Başlıklar: Konu akışını düzenleyen '## ' seviyesinde anlamlı ve kurumsal ara başlıklar kullan.
-   - İçerik Vurguları: $universityName'nin araştırma üniversitesi misyonu, TÜBİTAK/uluslararası projeleri, öğrenci odaklı yaklaşımı ve topluma hizmet ilkelerini kurumsal dille vurgula.
-   - Etiketler: En sonda '### Etiketler:' başlığı altında 4-6 adet hashtag ekle.
-2. Dil ve Üslup:
-   - Tarafsız, güvenilir, saygın, akıcı ve editoryal ajans dili.
-   - Cümleler düşük olmamalı, TDK kurallarına tam uyumlu olmalıdır.
-   - Asla modelin kendi sohbet ifadelerini ekleme. Yalnızca doğrudan haber metnini Markdown olarak üret.
+KURUMSAL HABER AJANSI İLKELERİ VE YAZIM STANDARTLARI:
+1. Kurumsal İlkeler & Üslup:
+   - Kurumsal haber ajansı ilkelerini (tarafsızlık, doğruluk, kamu yararı, 5N1K ve ters piramit kuralı) daima göz önünde bulundur.
+   - ABARTI VE FAZLA SÜSLÜ CÜMLELERDEN KESİNLİKLE UZAK DUR. Ağdalı sıfatlar, abartılı övgüler veya reklam dili yerine sade, net, nesnel, güvenilir ve saygın bir ajans dili kullan.
+   - TDK kurallarına tam uyumlu olmalı, anlatım bozukluğu barındırmamalıdır.
+
+2. Haber Mimarisi (Ters Piramit Formatı):
+   - Başlık: '# ' ile başlayan, büyük, kurumsal, abartısız ve bilgilendirici başlık. (Örn: # $universityName'nde Yeni Akademik Yıl Başladı)
+   - Spot (Özet): '**' ile kalınlaştırılmış, haberin temel özünü aktaran 1-2 cümlelik net spot.
+   - Mahreç ve Giriş: İlk paragraf MUTLAKA "**$cityName ($agencyName) -** " ifadesiyle başlamalıdır. Giriş cümlesinde 5N1K unsurları (ne, nerede, ne zaman, kim, nasıl, neden) net şekilde yer almalıdır.
+   - Rektör / Yetkili Görüşü: $universityName Rektörü $rectorName'nın kurumsal açıklamalarına yer ver. Demeci tırnak içinde ("...") belirt ve sonunu "... dedi" veya "... ifadelerini kullandı" ile bağla.
+   - Ara Başlıklar: Akışı düzenleyen '## ' seviyesinde kurumsal ara başlıklar kullan.
+   - Etiketler: En sonda '### Etiketler:' altında 4-6 adet kurumsal hashtag ekle.
+   - Yalnızca haber metnini Markdown olarak üret, sohbet cümlesi ekleme.
 
 Girdi Bilgileri:
-Ham Metin / Etkinlik Notları: $rawText
-Referans / Kaynak Bağlantı: ${referenceUrl?.isNotEmpty == true ? referenceUrl : "Belirtilmedi"}
+Ham Notlar: $rawText
+Kaynak Bağlantı: ${referenceUrl?.isNotEmpty == true ? referenceUrl : "Belirtilmedi"}
 """;
 
     final parts = <Map<String, dynamic>>[];
@@ -181,7 +188,7 @@ Referans / Kaynak Bağlantı: ${referenceUrl?.isNotEmpty == true ? referenceUrl 
         {'parts': parts}
       ],
       'generationConfig': {
-        'temperature': 0.65,
+        'temperature': 0.5,
       }
     };
 
@@ -192,7 +199,7 @@ Referans / Kaynak Bağlantı: ${referenceUrl?.isNotEmpty == true ? referenceUrl 
     );
   }
 
-  /// 3. TV HABER FORMATI (TV News Shortener & Teleprompter)
+  /// 3. TV HABER FORMATI (TV News & Teleprompter Script)
   static Future<GeminiResponseResult> convertToTvFormat({
     required String newsText,
     required bool hasVideo,
@@ -209,7 +216,8 @@ Referans / Kaynak Bağlantı: ${referenceUrl?.isNotEmpty == true ? referenceUrl 
       );
     }
 
-    final modelToUse = preferredModel ?? await ApiKeyStorage.getModelForModule('tv');
+    final rawModel = preferredModel ?? await ApiKeyStorage.getModelForModule('tv');
+    final modelToUse = GeminiModelConfig.sanitizeModel(rawModel);
     final universityName = await ApiKeyStorage.getUniversityName();
     final agencyName = await ApiKeyStorage.getAgencyName();
     final rectorName = await ApiKeyStorage.getRectorName();
@@ -217,40 +225,40 @@ Referans / Kaynak Bağlantı: ${referenceUrl?.isNotEmpty == true ? referenceUrl 
     final phoneticRules = isPhonetic
         ? """
 ÖZEL SPİKER SESLENDİRME & FONETİK KURALLARI:
-- Metni stüdyo spikerinin canlı yayında takılmadan okuyabilmesi ve Web Seslendirme (TTS) motorunun doğru telaffuz edebilmesi için fonetikleştir.
+- Metni stüdyo spikerinin canlı yayında takılmadan okuyabilmesi ve Web/Cihaz Seslendirme (TTS) motorunun doğru telaffuz edebilmesi için fonetikleştir.
 - Sayıları, yılları ve tarihleri mutlaka okunuşlarıyla yaz (Örn: "2026 yılında" yerine "iki bin yirmi altı yılında", "150 öğrenci" yerine "yüz elli öğrenci").
-- Kısaltmaların telaffuzunu açıkça yaz (Örn: "TÜBİTAK" -> "Tübitak", "AB" -> "Avrupa Birliği").
+- Kısaltmaların telaffuzunu açıkça yaz (Örn: "TÜBİTAK" -> "Tübitak").
 - Spikerin nefes alacağı ve duraklayacağı yerlere eğik çizgi (" / ") işareti koy.
 """
         : "";
 
     final videoInstruction = hasVideo
         ? """
-Habere GÖRÜNTÜ / VTR / RÖPORTAJ MEVCUTTUR.
+Habere GÖRÜNTÜ / VTR MEVCUTTUR.
 Biçimlendirme Kuralları:
-1. KJ: Kısa, vurucu ve haberin özünü veren alt bant başlığı. (İlk satır 'KJ: ...' olmalıdır. Örn: KJ: $universityName'nde Büyük Başarı)
+1. KJ: Kısa, vurucu ve haberin özünü veren alt bant başlığı. (İlk satır 'KJ: ...' olmalıdır. Örn: KJ: $universityName'nde Yeni Proje)
 2. CAM: Stüdyo spikerinin kameraya bakarak okuyacağı, izleyiciyi habere bağlayan 1-2 cümlelik dinamik giriş.
 3. SES: Görüntü (VTR) üzerine seslendirilecek 1-2 cümlelik dış ses metni.
 4. Video / Röportaj İbreleri: Haberdeki önemli kişilerin konuşma geçişleri (Örn: $rectorName Video).
 5. SES: VTR devamı dış ses kapanış cümlesi.
 """
         : """
-Habere GÖRÜNTÜ / VİDEO / VTR BULUNMAMAKTADIR. (SADECE STÜDYO SPİKERİ OKUYACAK)
+Habere GÖRÜNTÜ / VİDEO BULUNMAMAKTADIR. (SADECE STÜDYO SPİKERİ OKUYACAK)
 Biçimlendirme Kuralları:
-1. KJ: Kısa, dikkat çekici alt yazı başlığı. (İlk satır 'KJ: ...' olmalıdır)
-2. CAM: Stüdyo spikerinin doğrudan kameraya bakarak haberi baştan sona özetleyeceği, akıcı, net ve vurucu bülten metni (3-4 kısa ve net cümle).
-3. Kesinlikle VTR, Video, Röportaj, SES gibi var olmayan görüntü ibreleri EKLEME.
+1. KJ: Kısa, dikkat çekici alt bant başlığı. (İlk satır 'KJ: ...' olmalıdır)
+2. CAM: Stüdyo spikerinin doğrudan kameraya bakarak haberi baştan sona özetleyeceği, akıcı, net ve sade bülten metni (3-4 kısa ve net cümle).
+3. Kesinlikle VTR, Video, SES gibi var olmayan görüntü ibreleri EKLEME.
 """;
 
     final prompt = """
 Sen $universityName $agencyName TV Haber Masası'nın kıdemli bülten koordinatörü ve spiker editörüsün.
-Sana verilen haber metnini televizyon haber bültenine uygun olarak **oldukça kısa, öz, vurucu ve net** bir şekilde yeniden yazmalısın.
+Sana verilen haber metnini televizyon bülteni ve teleprompter akışına uygun olarak **kısa, öz, anlaşılır ve net** bir dille yeniden yaz.
 
 $videoInstruction
 $phoneticRules
 
 ÖNEMLİ YAZIM KURALLARI:
-- **ASLA markdown kalınlaştırma (**) veya yıldız işaretleri kullanma**. Örneğin CAM: veya KJ: gibi ifadelerde yıldız (**) asla kullanma.
+- Asla markdown kalınlaştırma (**) veya yıldız işaretleri kullanma. Örneğin CAM: veya KJ: gibi ifadelerde yıldız asla kullanma.
 - Çıktıyı tamamen temiz, düz metin (plain text) olarak üret.
 
 Haber Metni:
@@ -268,7 +276,7 @@ $newsText
         }
       ],
       'generationConfig': {
-        'temperature': 0.3,
+        'temperature': 0.2,
       }
     };
 
@@ -280,8 +288,8 @@ $newsText
     );
   }
 
-  /// 4. DİL, ÜSLUP & EDİTORYAL DENETİM (Editorial Checker)
-  static Future<GeminiResponseResult> checkEditorialAndStyle({
+  /// 4. EDİTORYAL DENETİM (TDK İmla Karnesi, Dil Denetimi & Yayına Hazır Saf Nihai Haber)
+  static Future<GeminiResponseResult> editorialCheck({
     required String newsText,
     String? preferredModel,
   }) async {
@@ -295,16 +303,18 @@ $newsText
       );
     }
 
-    final modelToUse = preferredModel ?? await ApiKeyStorage.getModelForModule('editorial');
+    final rawModel = preferredModel ?? await ApiKeyStorage.getModelForModule('editorial');
+    final modelToUse = GeminiModelConfig.sanitizeModel(rawModel);
     final universityName = await ApiKeyStorage.getUniversityName();
     final agencyName = await ApiKeyStorage.getAgencyName();
     final rectorName = await ApiKeyStorage.getRectorName();
 
     final prompt = """
 Sen $universityName $agencyName Yayın Denetleme Kurulu Başkanı ve Baş Editörüsün.
-Sana verilen haber metnini titizlikle incele ve 3 ana bölüme ayırarak değerlendir.
+Sana verilen haber metnini kurumsal haber ajansı ilkeleri, dil, üslup ve yazım kuralları bakımından titizlikle denetle.
+Abartılı ve fazla süslü cümleleri tespit ederek temizle.
 
-Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
+AŞAĞIDAKİ ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 
 === RAPOR_BASLANGIC ===
 # 📊 $agencyName Editoryal Değerlendirme Raporu
@@ -318,9 +328,10 @@ Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 - **Nasıl?**: [Açıklama]
 - **Neden?**: [Açıklama]
 
-### 🔍 TDK İmla ve Kurumsal Dil Denetimi
-- İmla & Noktalama Durumu: [Değerlendirme]
-- $agencyName Format Uyumu: [Mahreç girişi, Rektör $rectorName demeci ve tırnak alıntıları uyumu]
+### 🔍 Dil, Üslup ve TDK İmla Denetimi
+- Dil & Anlatım: [Kurumsal ajans ilkelerine uygunluk, abartı ve süslü ifadelerden arındırma durumu]
+- İmla & Noktalama: [TDK yazım kuralları değerlendirmesi]
+- $agencyName Formatı: [Mahreç, Rektör $rectorName demeci ve tırnak işaretleri uyumu]
 === RAPOR_BITIS ===
 
 === DEGISIKLIKLER_BASLANGIC ===
@@ -331,7 +342,7 @@ Aşağıdaki ETİKETLERİ VE BÖLÜM YAPISINI AYRI AYRI KULLANARAK YANIT VER:
 === DEGISIKLIKLER_BITIS ===
 
 === DUZELTILMIS_METIN_BASLANGIC ===
-[Buraya haberin başlığı (# Başlık), spotu (**Spot**) ve $agencyName standartlarına göre sıfır hatayla yeniden yazılmış, kusursuz ve yayınlanmaya hazır nihai haber metnini yerleştir.]
+[Buraya SADECE VE SADECE haberin başlığı (# Başlık), spotu (**Spot**) ve $agencyName standartlarına göre abartıdan arındırılmış, sıfır hatayla yazılmış, KUSURSUZ VE YAYINA HAZIR SAF NİHAİ HABER METNİNİ yerleştir. Bu alana asla denetim puanı veya rapor cümlesi koyma!]
 === DUZELTILMIS_METIN_BITIS ===
 
 İncelenecek Haber Metni:
@@ -349,7 +360,7 @@ $newsText
         }
       ],
       'generationConfig': {
-        'temperature': 0.2,
+        'temperature': 0.15,
       }
     };
 
@@ -378,27 +389,44 @@ $newsText
     String changelog = '';
     String editedText = '';
 
-    final reportMatch = RegExp(r'=== RAPOR_BASLANGIC ===([\s\S]*?)=== RAPOR_BITIS ===').firstMatch(raw);
+    final reportMatch = RegExp(r'=== RAPOR_BASLANGIC ===([\s\S]*?)=== RAPOR_BITIS ===', caseSensitive: false).firstMatch(raw);
     if (reportMatch != null) {
       report = reportMatch.group(1)?.trim() ?? '';
     }
 
-    final changeMatch = RegExp(r'=== DEGISIKLIKLER_BASLANGIC ===([\s\S]*?)=== DEGISIKLIKLER_BITIS ===').firstMatch(raw);
+    final changeMatch = RegExp(r'=== DEGISIKLIKLER_BASLANGIC ===([\s\S]*?)=== DEGISIKLIKLER_BITIS ===', caseSensitive: false).firstMatch(raw);
     if (changeMatch != null) {
       changelog = changeMatch.group(1)?.trim() ?? '';
     }
 
-    final editedMatch = RegExp(r'=== DUZELTILMIS_METIN_BASLANGIC ===([\s\S]*?)=== DUZELTILMIS_METIN_BITIS ===').firstMatch(raw);
+    final editedMatch = RegExp(r'=== DUZELTILMIS_METIN_BASLANGIC ===([\s\S]*?)=== DUZELTILMIS_METIN_BITIS ===', caseSensitive: false).firstMatch(raw);
     if (editedMatch != null) {
       editedText = editedMatch.group(1)?.trim() ?? '';
     }
 
-    // Fallback if tags were omitted
-    if (report.isEmpty && editedText.isEmpty) {
-      report = raw;
-      editedText = raw;
-    } else if (editedText.isEmpty) {
-      editedText = raw;
+    // Akıllı Fallback: Eğer etiketler eksikse raporu ve metni dikkatlice ayrıştır
+    if (editedText.isEmpty) {
+      if (raw.contains('=== DUZELTILMIS_METIN_BASLANGIC ===')) {
+        final parts = raw.split('=== DUZELTILMIS_METIN_BASLANGIC ===');
+        if (parts.length > 1) {
+          editedText = parts[1].replaceAll('=== DUZELTILMIS_METIN_BITIS ===', '').trim();
+        }
+      }
+    }
+
+    if (report.isEmpty && editedText.isNotEmpty) {
+      report = raw.replaceAll(editedText, '').replaceAll('=== DUZELTILMIS_METIN_BASLANGIC ===', '').replaceAll('=== DUZELTILMIS_METIN_BITIS ===', '').trim();
+    }
+
+    if (editedText.isEmpty) {
+      // Eğer hiç etiket yoksa ama metinde başlık '# ' varsa başlığı bul
+      final hashIndex = raw.indexOf('\n# ');
+      if (hashIndex != -1) {
+        report = raw.substring(0, hashIndex).trim();
+        editedText = raw.substring(hashIndex).trim();
+      } else {
+        editedText = raw;
+      }
     }
 
     return {
@@ -408,7 +436,7 @@ $newsText
     };
   }
 
-  /// Fallback mekanizmalı API Çağrısı
+  /// Fallback mekanizmalı API Çağrısı (Sadece kararlı Flash modelleri denenir)
   static Future<GeminiResponseResult> _executeWithFallback({
     required String apiKey,
     required String primaryModel,
@@ -448,7 +476,7 @@ $newsText
               );
             }
           }
-          lastError = '$model: Modelden geçerli bir metin yanıtı alınamadı.';
+          lastError = '$model: Modelden metin yanıtı alınamadı.';
         } else {
           final errBody = response.body;
           try {
@@ -456,9 +484,8 @@ $newsText
             final msg = errJson['error']?['message'] ?? 'HTTP ${response.statusCode}';
             lastError = '$model: $msg';
           } catch (_) {
-            lastError = '$model: HTTP ${response.statusCode} - $errBody';
+            lastError = '$model: HTTP ${response.statusCode}';
           }
-          // Sonraki fallback modeline devam et
         }
       } catch (e) {
         lastError = '$model: ${e.toString()}';

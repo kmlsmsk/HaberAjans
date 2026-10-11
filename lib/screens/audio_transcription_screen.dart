@@ -40,9 +40,10 @@ class _AudioTranscriptionScreenState extends State<AudioTranscriptionScreen> wit
 
   Future<void> _loadDefaultModel() async {
     final model = await ApiKeyStorage.getModelForModule('audio');
+    final sanitized = GeminiModelConfig.sanitizeModel(model);
     if (mounted) {
       setState(() {
-        _selectedModel = model;
+        _selectedModel = sanitized;
       });
     }
   }
@@ -183,7 +184,10 @@ class _AudioTranscriptionScreenState extends State<AudioTranscriptionScreen> wit
                   ModelSelectorDropdown(
                     selectedModelId: _selectedModel,
                     moduleType: 'audio',
-                    onChanged: (model) => setState(() => _selectedModel = model),
+                    onChanged: (model) {
+                      setState(() => _selectedModel = model);
+                      ApiKeyStorage.saveModel('audio', model);
+                    },
                   ),
                 ],
               ),

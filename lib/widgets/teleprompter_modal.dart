@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import '../services/saved_content_service.dart';
 
 class TeleprompterModal extends StatefulWidget {
   final String text;
@@ -169,6 +170,48 @@ class _TeleprompterModalState extends State<TeleprompterModal> {
     }
   }
 
+  Future<void> _savePrompterText() async {
+    final titleController = TextEditingController(text: widget.title);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Prompter Metnini Kaydet'),
+        content: TextField(
+          controller: titleController,
+          decoration: const InputDecoration(
+            labelText: 'Bülten Başlığı',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF003366)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final title = titleController.text.trim().isEmpty ? widget.title : titleController.text.trim();
+      final item = SavedPrompterItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        content: widget.text,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await SavedContentService.savePrompter(item);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Prompter metni başarıyla kaydedildi!'), backgroundColor: Colors.green),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _scrollTimer?.cancel();
@@ -229,6 +272,14 @@ class _TeleprompterModalState extends State<TeleprompterModal> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Bülteni Kaydet',
+            icon: const Icon(
+              Icons.bookmark_add_outlined,
+              color: Color(0xFF00A3E0),
+            ),
+            onPressed: _savePrompterText,
+          ),
           IconButton(
             tooltip: _isMirrored ? 'Normal Mod' : 'Ayna Modu (Ters Yansıtma)',
             icon: Icon(

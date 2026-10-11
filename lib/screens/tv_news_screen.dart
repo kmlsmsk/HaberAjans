@@ -41,10 +41,11 @@ class _TvNewsScreenState extends State<TvNewsScreen> {
 
   Future<void> _loadSettings() async {
     final model = await ApiKeyStorage.getModelForModule('tv');
+    final sanitized = GeminiModelConfig.sanitizeModel(model);
     final agency = await ApiKeyStorage.getAgencyName();
     if (mounted) {
       setState(() {
-        _selectedModel = model;
+        _selectedModel = sanitized;
         _agencyName = agency;
       });
     }
@@ -361,7 +362,10 @@ class _TvNewsScreenState extends State<TvNewsScreen> {
                   ModelSelectorDropdown(
                     selectedModelId: _selectedModel,
                     moduleType: 'tv',
-                    onChanged: (model) => setState(() => _selectedModel = model),
+                    onChanged: (model) {
+                      setState(() => _selectedModel = model);
+                      ApiKeyStorage.saveModel('tv', model);
+                    },
                   ),
                 ],
               ),

@@ -47,11 +47,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final portalUrl = await ApiKeyStorage.getPortalUrl();
     final models = await ApiKeyStorage.getAllModels();
 
-    final globalModel = await ApiKeyStorage.getModelForModule('global');
-    final audioModel = await ApiKeyStorage.getModelForModule('audio');
-    final newsModel = await ApiKeyStorage.getModelForModule('news');
-    final tvModel = await ApiKeyStorage.getModelForModule('tv');
-    final editorialModel = await ApiKeyStorage.getModelForModule('editorial');
+    final globalModel = GeminiModelConfig.sanitizeModel(await ApiKeyStorage.getModelForModule('global'));
+    final audioModel = GeminiModelConfig.sanitizeModel(await ApiKeyStorage.getModelForModule('audio'));
+    final newsModel = GeminiModelConfig.sanitizeModel(await ApiKeyStorage.getModelForModule('news'));
+    final tvModel = GeminiModelConfig.sanitizeModel(await ApiKeyStorage.getModelForModule('tv'));
+    final editorialModel = GeminiModelConfig.sanitizeModel(await ApiKeyStorage.getModelForModule('editorial'));
 
     if (mounted) {
       setState(() {
@@ -349,7 +349,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: _models.any((m) => m.id == value) ? value : _models.first.id,
+                  value: _models.any((m) => m.id == GeminiModelConfig.sanitizeModel(value))
+                      ? GeminiModelConfig.sanitizeModel(value)
+                      : (_models.isNotEmpty ? _models.first.id : GeminiModelConfig.defaultGlobalModel),
                   isExpanded: true,
                   items: _models.map((m) {
                     return DropdownMenuItem(
@@ -357,7 +359,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Text(m.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
-                  onChanged: onChanged,
+                  onChanged: (val) {
+                    if (val != null) {
+                      onChanged(GeminiModelConfig.sanitizeModel(val));
+                    }
+                  },
                 ),
               ),
             ),

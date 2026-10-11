@@ -17,14 +17,17 @@ const DEFAULT_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Hızlı, doğru ve güçlü model (Varsayılan & Önerilen)', isCustom: false },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Hızlı ve kararlı temel üretim modeli', isCustom: false },
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', desc: 'Güvenilir ses ve metin işleme', isCustom: false },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', desc: 'Geniş bağlamlı profesyonel model', isCustom: false },
 ];
 
 // Model İsim Kontrolü & Temizliği
 function sanitizeModelId(modelId) {
   if (!modelId) return 'gemini-2.5-flash';
-  const clean = modelId.replace('models/', '').trim();
+  const clean = modelId.replace('models/', '').trim().toLowerCase();
+  if (clean === 'gemini-1.5-pro' || clean.includes('pro') || clean.includes('3.8')) {
+    return 'gemini-2.5-flash';
+  }
   const aliases = {
+    'gemini-1.5-pro': 'gemini-2.5-flash',
     'gemini-2.5-pro': 'gemini-2.5-flash',
     'gemini-3.8-flash': 'gemini-2.5-flash',
     'gemini-3.8-live': 'gemini-2.5-flash',

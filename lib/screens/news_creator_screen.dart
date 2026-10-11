@@ -43,13 +43,14 @@ class _NewsCreatorScreenState extends State<NewsCreatorScreen> {
 
   Future<void> _loadSettings() async {
     final model = await ApiKeyStorage.getModelForModule('news');
+    final sanitized = GeminiModelConfig.sanitizeModel(model);
     final agency = await ApiKeyStorage.getAgencyName();
     final uni = await ApiKeyStorage.getUniversityName();
     final rector = await ApiKeyStorage.getRectorName();
 
     if (mounted) {
       setState(() {
-        _selectedModel = model;
+        _selectedModel = sanitized;
         _agencyName = agency;
         _universityName = uni;
         _rectorName = rector;
@@ -154,7 +155,10 @@ class _NewsCreatorScreenState extends State<NewsCreatorScreen> {
                   ModelSelectorDropdown(
                     selectedModelId: _selectedModel,
                     moduleType: 'news',
-                    onChanged: (model) => setState(() => _selectedModel = model),
+                    onChanged: (model) {
+                      setState(() => _selectedModel = model);
+                      ApiKeyStorage.saveModel('news', model);
+                    },
                   ),
                 ],
               ),

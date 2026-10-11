@@ -114,9 +114,8 @@ class ApiKeyStorage {
         final loaded = list
             .map((item) => GeminiModelOption.fromJson(item as Map<String, dynamic>))
             .where((m) =>
-                m.id.startsWith('gemini-2') ||
-                m.id.startsWith('gemini-1.5') ||
-                m.isCustom)
+                !m.id.toLowerCase().contains('pro') &&
+                !m.id.toLowerCase().contains('3.8'))
             .toList();
         if (loaded.isNotEmpty) return loaded;
       } catch (_) {}
@@ -157,42 +156,64 @@ class ApiKeyStorage {
   static Future<void> saveModel(String moduleKey, String modelId) async {
     final prefs = await SharedPreferences.getInstance();
     final sanitized = GeminiModelConfig.sanitizeModel(modelId);
-    await prefs.setString(moduleKey, sanitized);
+    String key = _keyGlobalModel;
+    switch (moduleKey) {
+      case 'audio':
+        key = _keyAudioModel;
+        break;
+      case 'news':
+        key = _keyNewsModel;
+        break;
+      case 'tv':
+        key = _keyTvModel;
+        break;
+      case 'editorial':
+        key = _keyEditorialModel;
+        break;
+      default:
+        key = moduleKey.startsWith('habervar_') ? moduleKey : _keyGlobalModel;
+        break;
+    }
+    await prefs.setString(key, sanitized);
   }
 
   static Future<String> getModelForModule(String moduleType) async {
     final prefs = await SharedPreferences.getInstance();
-    final globalModel = GeminiModelConfig.sanitizeModel(
-        prefs.getString(_keyGlobalModel) ?? prefs.getString('ege_gemini_global_model'));
+    final rawGlobal = prefs.getString(_keyGlobalModel) ?? prefs.getString('ege_gemini_global_model');
+    final globalModel = GeminiModelConfig.sanitizeModel(rawGlobal);
 
-    String selected;
+    String? rawSelected;
+    String moduleStorageKey = _keyGlobalModel;
     switch (moduleType) {
       case 'audio':
-        selected = prefs.getString(_keyAudioModel) ??
-            prefs.getString('ege_gemini_audio_model') ??
-            globalModel;
+        rawSelected = prefs.getString(_keyAudioModel) ?? prefs.getString('ege_gemini_audio_model');
+        moduleStorageKey = _keyAudioModel;
         break;
       case 'news':
-        selected = prefs.getString(_keyNewsModel) ??
-            prefs.getString('ege_gemini_news_model') ??
-            globalModel;
+        rawSelected = prefs.getString(_keyNewsModel) ?? prefs.getString('ege_gemini_news_model');
+        moduleStorageKey = _keyNewsModel;
         break;
       case 'tv':
-        selected = prefs.getString(_keyTvModel) ??
-            prefs.getString('ege_gemini_tv_model') ??
-            globalModel;
+        rawSelected = prefs.getString(_keyTvModel) ?? prefs.getString('ege_gemini_tv_model');
+        moduleStorageKey = _keyTvModel;
         break;
       case 'editorial':
-        selected = prefs.getString(_keyEditorialModel) ??
-            prefs.getString('ege_gemini_editorial_model') ??
-            globalModel;
+        rawSelected = prefs.getString(_keyEditorialModel) ?? prefs.getString('ege_gemini_editorial_model');
+        moduleStorageKey = _keyEditorialModel;
         break;
       case 'global':
       default:
-        selected = globalModel;
+        rawSelected = rawGlobal;
+        moduleStorageKey = _keyGlobalModel;
         break;
     }
-    return GeminiModelConfig.sanitizeModel(selected);
+
+    final sanitized = GeminiModelConfig.sanitizeModel(rawSelected ?? globalModel);
+    // Eski veya geçersiz model adı saklanmışsa hemen geçerli Flash 2.5 ile güncelle
+    if (rawSelected != sanitized) {
+      await prefs.setString(moduleStorageKey, sanitized);
+    }
+    return sanitized;
   }
 
   static Future<void> saveAllModuleModels({
