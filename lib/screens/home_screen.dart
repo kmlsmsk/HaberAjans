@@ -335,14 +335,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           'YAZILIM & SİSTEM GELİŞTİRİCİ',
                           style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'Dr. Kemal ŞİMŞEK',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF003366)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'Bilgisayar Mühendisi',
                           style: TextStyle(fontSize: 11, color: Color(0xFF00A3E0), fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -534,27 +540,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF003366).withAlpha(15),
-                              borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF003366).withAlpha(15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.alt_route, color: Color(0xFF003366), size: 18),
                             ),
-                            child: const Icon(Icons.alt_route, color: Color(0xFF003366), size: 18),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Kesintisiz Haber Üretim Hattı',
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF002244),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Kesintisiz Haber Üretim Hattı',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF002244),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -816,11 +828,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: const Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
+                  runSpacing: 2,
                   children: [
                     Icon(Icons.code, size: 16, color: Color(0xFF003366)),
-                    SizedBox(width: 8),
+                    SizedBox(width: 4),
                     Text(
                       'Geliştiren: ',
                       style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
@@ -830,7 +845,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF003366)),
                     ),
                     Text(
-                      ' • Bilgisayar Mühendisi',
+                      '• Bilgisayar Mühendisi',
                       style: TextStyle(fontSize: 11, color: Color(0xFF00A3E0), fontWeight: FontWeight.w600),
                     ),
                   ],

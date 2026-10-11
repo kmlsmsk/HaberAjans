@@ -125,10 +125,19 @@ class _AudioTranscriptionScreenState extends State<AudioTranscriptionScreen> wit
     final bytes = await file.readAsBytes();
     final ext = _selectedFilePath!.split('.').last.toLowerCase();
     String mime = 'audio/mp4';
-    if (ext == 'mp3') mime = 'audio/mp3';
-    if (ext == 'wav') mime = 'audio/wav';
-    if (ext == 'aac') mime = 'audio/aac';
-    if (ext == 'ogg') mime = 'audio/ogg';
+    if (ext == 'mp3') {
+      mime = 'audio/mp3';
+    } else if (ext == 'wav') {
+      mime = 'audio/wav';
+    } else if (ext == 'aac') {
+      mime = 'audio/aac';
+    } else if (ext == 'ogg') {
+      mime = 'audio/ogg';
+    } else if (ext == 'flac') {
+      mime = 'audio/flac';
+    } else if (ext == 'm4a') {
+      mime = 'audio/m4a';
+    }
 
     final res = await GeminiApiService.transcribeAudio(
       audioBytes: bytes,

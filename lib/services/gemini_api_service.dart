@@ -48,6 +48,7 @@ class GeminiApiService {
             ?.map((m) => (m['name'] as String).replaceFirst('models/', ''))
             .where((name) =>
                 name.contains('gemini') &&
+                !name.contains('1.5') &&
                 !name.contains('pro') &&
                 !name.contains('3.8'))
             .toList();
@@ -445,9 +446,11 @@ $newsText
   }) async {
     final sanitizedPrimary = GeminiModelConfig.sanitizeModel(primaryModel);
     final modelsToTry = GeminiModelConfig.getFallbackModels(sanitizedPrimary);
+    String primaryError = '';
     String lastError = 'Bilinmeyen bir hata oluştu.';
 
-    for (final model in modelsToTry) {
+    for (int i = 0; i < modelsToTry.length; i++) {
+      final model = modelsToTry[i];
       try {
         final url = Uri.parse('$_baseUrl/models/$model:generateContent?key=$apiKey');
         final response = await http
@@ -476,27 +479,44 @@ $newsText
               );
             }
           }
-          lastError = '$model: Modelden metin yanıtı alınamadı.';
+          final noTextMsg = 'Model ($model) yanıt döndürdü ancak metin içeriği bulunamadı.';
+          if (i == 0) primaryError = noTextMsg;
+          lastError = noTextMsg;
         } else {
           final errBody = response.body;
+          String msg = 'HTTP ${response.statusCode}';
           try {
             final errJson = jsonDecode(errBody);
-            final msg = errJson['error']?['message'] ?? 'HTTP ${response.statusCode}';
-            lastError = '$model: $msg';
-          } catch (_) {
-            lastError = '$model: HTTP ${response.statusCode}';
+            msg = errJson['error']?['message'] ?? msg;
+          } catch (_) {}
+
+          final formattedErr = '$model: $msg';
+          if (i == 0) primaryError = formattedErr;
+          lastError = formattedErr;
+
+          // Eğer hata yetkilendirme (API key geçersiz / kota dolumu) ise diğer modelleri boşuna deneme
+          if (response.statusCode == 400 && msg.toLowerCase().contains('api key not valid')) {
+            break;
+          }
+          if (response.statusCode == 403) {
+            break;
           }
         }
       } catch (e) {
-        lastError = '$model: ${e.toString()}';
+        final catchErr = '$model: ${e.toString()}';
+        if (i == 0) primaryError = catchErr;
+        lastError = catchErr;
       }
     }
+
+    // Kullanıcıya yanıltıcı fallback hatası yerine, asıl seçtiği modelin hatasını göster
+    final displayError = primaryError.isNotEmpty ? primaryError : lastError;
 
     return GeminiResponseResult(
       isSuccess: false,
       text: '',
       usedModel: sanitizedPrimary,
-      errorMessage: 'Gemini API çağrısı başarısız oldu:\n$lastError',
+      errorMessage: 'Gemini API ($sanitizedPrimary) çağrısı başarısız oldu:\n$displayError',
     );
   }
 }

@@ -692,14 +692,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Text(
                           'Geliştiren',
                           style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'Dr. Kemal ŞİMŞEK',
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF003366)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'Bilgisayar Mühendisi',
                           style: TextStyle(fontSize: 12, color: Color(0xFF00A3E0), fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

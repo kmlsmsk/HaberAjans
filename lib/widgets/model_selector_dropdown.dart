@@ -60,14 +60,14 @@ class _ModelSelectorDropdownState extends State<ModelSelectorDropdown> {
     final sanitizedId = GeminiModelConfig.sanitizeModel(widget.selectedModelId);
     final allItems = List<GeminiModelOption>.from(_models);
 
-    // Eğer model listede yoksa ve geçersiz/pro değilse özel olarak ekle
+    // Eğer model listede yoksa kullanıcı tanımlı olarak ekle
     final exists = allItems.any((m) => m.id == sanitizedId);
-    if (!exists && sanitizedId.isNotEmpty && !sanitizedId.contains('pro')) {
+    if (!exists && sanitizedId.isNotEmpty) {
       allItems.add(
         GeminiModelOption(
           id: sanitizedId,
           name: '$sanitizedId (Özel)',
-          description: 'Kullanıcı tanımlı model',
+          description: 'Kullanıcı tanımlı özel model',
           isCustom: true,
         ),
       );

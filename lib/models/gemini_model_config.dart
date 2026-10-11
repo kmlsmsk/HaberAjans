@@ -57,6 +57,7 @@ class GeminiModelOption {
 }
 
 class GeminiModelConfig {
+  /// Yalnızca çalışan, güncel ve resmi Flash modelleri varsayılan olarak sunulur
   static const List<GeminiModelOption> defaultBuiltInModels = [
     GeminiModelOption(
       id: 'gemini-2.5-flash',
@@ -68,14 +69,14 @@ class GeminiModelConfig {
     GeminiModelOption(
       id: 'gemini-2.0-flash',
       name: 'Gemini 2.0 Flash',
-      description: 'Hızlı ve kararlı yeni nesil üretim modeli',
+      description: 'Hızlı, dengeli ve kararlı yeni nesil üretim modeli',
       isAudioSupported: true,
       isVisionSupported: true,
     ),
     GeminiModelOption(
-      id: 'gemini-1.5-flash',
-      name: 'Gemini 1.5 Flash',
-      description: 'Yüksek kararlılık ve güvenilir temel model',
+      id: 'gemini-2.0-flash-lite',
+      name: 'Gemini 2.0 Flash-Lite',
+      description: 'Düşük gecikmeli, ultra hafif ve yüksek verimli Flash modeli',
       isAudioSupported: true,
       isVisionSupported: true,
     ),
@@ -87,8 +88,9 @@ class GeminiModelConfig {
   static const String defaultTvModel = 'gemini-2.5-flash';
   static const String defaultEditorialModel = 'gemini-2.5-flash';
 
-  // Kullanımdan kalkan, desteklenmeyen veya uyumsuz model adlarını Flash 2.5'e yönlendiren harita
-  static const Map<String, String> modelAliases = {
+  // Kullanımdan kalkan, desteklenmeyen veya uyumsuz modelleri güvenli Flash 2.5'e yönlendiren harita
+  static const Map<String, String> legacyModelAliases = {
+    'gemini-1.5-flash': 'gemini-2.5-flash',
     'gemini-1.5-pro': 'gemini-2.5-flash',
     'gemini-2.5-pro': 'gemini-2.5-flash',
     'gemini-pro': 'gemini-2.5-flash',
@@ -100,33 +102,37 @@ class GeminiModelConfig {
     'pro': 'gemini-2.5-flash',
   };
 
-  /// Model ID'sini temizler ve güvenli, çalışan Flash 2.5 modeline yönlendirir
+  /// Model ID'sini temizler ve eski/geçersiz modelleri doğrudan varsayılan Flash 2.5'e yönlendirir
   static String sanitizeModel(String? modelId) {
     if (modelId == null || modelId.trim().isEmpty) {
       return defaultGlobalModel;
     }
-    final clean = modelId.replaceAll('models/', '').trim().toLowerCase();
-    if (clean == 'gemini-1.5-pro' ||
-        clean == 'gemini-2.5-pro' ||
-        clean == 'gemini-pro' ||
-        clean == 'pro' ||
-        clean.contains('3.8') ||
-        clean.contains('pro')) {
+    final clean = modelId.replaceAll('models/', '').trim();
+    final lower = clean.toLowerCase();
+
+    // Eski/kullanımdan kalkmış alias'lar
+    if (legacyModelAliases.containsKey(lower)) {
+      return legacyModelAliases[lower]!;
+    }
+
+    // "pro" içeren eski modelleri varsayılana çek, ancak kullanıcı özel eklemişse koru
+    if (lower == 'gemini-1.5-pro' || lower == 'gemini-2.5-pro' || lower == 'gemini-pro') {
       return defaultGlobalModel;
     }
-    return modelAliases[clean] ?? clean;
+
+    return clean;
   }
 
   /// Güvenilir Fallback zinciri (Sadece çalışan Flash modelleri)
   static List<String> getFallbackModels(String preferredModel) {
     final sanitized = sanitizeModel(preferredModel);
     final list = <String>[sanitized];
-    const backups = [
+    const flashBackups = [
       'gemini-2.5-flash',
       'gemini-2.0-flash',
-      'gemini-1.5-flash',
+      'gemini-2.0-flash-lite',
     ];
-    for (final b in backups) {
+    for (final b in flashBackups) {
       if (!list.contains(b)) {
         list.add(b);
       }

@@ -114,9 +114,18 @@ class ApiKeyStorage {
         final loaded = list
             .map((item) => GeminiModelOption.fromJson(item as Map<String, dynamic>))
             .where((m) =>
-                !m.id.toLowerCase().contains('pro') &&
-                !m.id.toLowerCase().contains('3.8'))
+                m.isCustom ||
+                (!m.id.toLowerCase().contains('1.5') &&
+                 !m.id.toLowerCase().contains('pro') &&
+                 !m.id.toLowerCase().contains('3.8')))
             .toList();
+
+        // Eğer dahili default modellerden eksik olan varsa başa ekle
+        for (final def in GeminiModelConfig.defaultBuiltInModels) {
+          if (!loaded.any((m) => m.id == def.id)) {
+            loaded.insert(0, def);
+          }
+        }
         if (loaded.isNotEmpty) return loaded;
       } catch (_) {}
     }
@@ -150,6 +159,7 @@ class ApiKeyStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyModelsJson);
     await prefs.remove('ege_gemini_models_v3');
+    await prefs.remove('habervar_gemini_models_v4');
   }
 
   // Modül Model Seçimleri
