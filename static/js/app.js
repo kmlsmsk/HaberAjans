@@ -1,34 +1,40 @@
 /**
- * HaberCiM - Akıllı Haber Üretim & AI Medya Asistanı Web Client
+ * HaberVAR - Akıllı Haber Üretim & AI Medya Asistanı Web Client
  * Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)
  */
 
 // Varsayılan Anonim Kurumsal Bilgiler
 const DEFAULT_INSTITUTION = {
-  university: 'XXXX Üniversitesi',
-  agency: 'XXX Ajans',
-  rector: 'Prof. Dr. XXXX YYYY',
+  university: 'ABC Üniversitesi',
+  agency: 'ABC Ajansı',
+  rector: 'Prof. Dr. Adı Soyadı',
   city: 'İZMİR',
-  portal: 'www.xxxajans.com'
+  portal: 'www.abcajansi.com'
 };
 
 // Varsayılan Model Listesi (Google Gemini Resmi API Modelleri)
 const DEFAULT_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Hızlı, doğru ve güçlü model (Varsayılan & Önerilen)', isCustom: false },
-  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', desc: 'Yeni nesil ultra hızlı model', isCustom: false },
-  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', desc: 'Gelişmiş editoryal denetim ve muhakeme', isCustom: false },
-  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', desc: 'Multimodal ve ses önizleme modeli', isCustom: false },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Hızlı ve kararlı temel üretim modeli', isCustom: false },
-  { id: 'gemini-3.8-live', name: 'Gemini 3.8 Live', desc: 'Canlı akış ve ses/metin modeli', isCustom: false },
-  { id: 'gemini-3.8-live-extended-thinking', name: 'Gemini 3.8 Live (Extended Thinking)', desc: 'Genişletilmiş düşünce ve analiz', isCustom: false }
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', desc: 'Güvenilir ses ve metin işleme', isCustom: false },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', desc: 'Geniş bağlamlı profesyonel model', isCustom: false },
 ];
 
 // Model İsim Kontrolü & Temizliği
 function sanitizeModelId(modelId) {
   if (!modelId) return 'gemini-2.5-flash';
-  if (modelId === 'gemini-2.5-pro' || modelId === 'gemini-1.5-pro' || modelId === 'gemini-1.5-flash') return 'gemini-2.5-flash';
-  if (modelId === 'gemini-pro') return 'gemini-2.5-flash';
-  return modelId.replace('models/', '').trim();
+  const clean = modelId.replace('models/', '').trim();
+  const aliases = {
+    'gemini-2.5-pro': 'gemini-2.5-flash',
+    'gemini-3.8-flash': 'gemini-2.5-flash',
+    'gemini-3.8-live': 'gemini-2.5-flash',
+    'gemini-3.8-live-extended-thinking': 'gemini-2.5-flash',
+    'gemini-3-flash-preview': 'gemini-2.5-flash',
+    'gemini-pro': 'gemini-2.5-flash',
+    'flash': 'gemini-2.5-flash',
+    'pro': 'gemini-2.5-flash'
+  };
+  return aliases[clean] || clean;
 }
 
 let storedModuleModels = {};
@@ -1284,4 +1290,295 @@ function setupEventListeners() {
     keyEl.addEventListener('input', handleKeyChange);
     keyEl.addEventListener('change', handleKeyChange);
   }
+}
+
+// ========================================================
+// EDİTORYAL SESLİ OKUMA (TTS - WEB SPEECH API)
+// ========================================================
+let isEditorialSpeaking = false;
+
+function toggleSpeechEditorial() {
+  if (!('speechSynthesis' in window)) {
+    alert('Tarayıcınız sesli okuma (Web Speech API) özelliğini desteklemiyor.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-editorial-tts');
+  const label = document.getElementById('btn-editorial-tts-label');
+  const rawText = document.getElementById('editorial-edited-raw')?.value || '';
+
+  if (isEditorialSpeaking) {
+    window.speechSynthesis.cancel();
+    isEditorialSpeaking = false;
+    if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5';
+    if (label) label.textContent = 'Haberi Sesli Oku';
+    return;
+  }
+
+  if (!rawText.trim()) {
+    alert('Seslendirilecek haber metni bulunamadı.');
+    return;
+  }
+
+  // Markdown temizliği
+  let clean = rawText
+    .replace(/#+\s*/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\[CAM\s*\d*\]/gi, '')
+    .replace(/KJ:.*$/gim, '')
+    .replace(/VTR:.*$/gim, '')
+    .replace(/===.*?===/g, '')
+    .replace(/\n+/g, '. ')
+    .trim();
+
+  const utterance = new SpeechSynthesisUtterance(clean);
+  utterance.lang = 'tr-TR';
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+
+  utterance.onstart = () => {
+    isEditorialSpeaking = true;
+    if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5';
+    if (label) label.textContent = 'Okumayı Durdur';
+  };
+
+  utterance.onend = () => {
+    isEditorialSpeaking = false;
+    if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5';
+    if (label) label.textContent = 'Haberi Sesli Oku';
+  };
+
+  utterance.onerror = () => {
+    isEditorialSpeaking = false;
+    if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5';
+    if (label) label.textContent = 'Haberi Sesli Oku';
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+// ========================================================
+// EDİTORYAL VE PROMPTER CRUD (LOCAL STORAGE)
+// ========================================================
+function getSavedNews() {
+  try {
+    return JSON.parse(localStorage.getItem('habervar_saved_news') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveOrUpdateEditorialNews() {
+  const content = document.getElementById('editorial-edited-raw')?.value || '';
+  const report = document.getElementById('editorial-report-raw')?.value || '';
+  if (!content.trim()) {
+    alert('Kaydedilecek düzeltilmiş haber metni bulunamadı.');
+    return;
+  }
+
+  let defaultTitle = 'Haber_' + new Date().toLocaleString('tr-TR');
+  const firstLine = content.split('\n').find(l => l.trim().startsWith('#'));
+  if (firstLine) defaultTitle = firstLine.replace('#', '').trim();
+
+  const title = prompt('Haber Başlığını Giriniz:', defaultTitle);
+  if (!title) return;
+
+  const list = getSavedNews();
+  const newItem = {
+    id: Date.now().toString(),
+    title: title.trim(),
+    content: content.trim(),
+    report: report.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  list.unshift(newItem);
+  localStorage.setItem('habervar_saved_news', JSON.stringify(list));
+  alert(`"${title}" başarıyla kaydedildi!`);
+}
+
+function showSavedNewsModal() {
+  const list = getSavedNews();
+  let html = `
+    <div id="saved-news-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+          <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+            <i class="fa-solid fa-folder-open text-[#003366]"></i> Kayıtlı Nihai Haberler (${list.length})
+          </h3>
+          <button onclick="document.getElementById('saved-news-modal').remove()" class="text-slate-400 hover:text-slate-700 text-lg">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="overflow-y-auto space-y-2 flex-1">
+  `;
+
+  if (list.length === 0) {
+    html += '<p class="text-sm text-slate-500 py-8 text-center">Henüz kayıtlı haber bulunmuyor.</p>';
+  } else {
+    list.forEach(item => {
+      const dateStr = new Date(item.updatedAt).toLocaleString('tr-TR');
+      html += `
+        <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+          <div class="overflow-hidden">
+            <div class="font-bold text-xs text-slate-900 truncate">${item.title}</div>
+            <div class="text-[10px] text-slate-500">${dateStr}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="loadSavedNews('${item.id}')" class="px-2.5 py-1 bg-[#003366] hover:bg-[#002244] text-white rounded-lg text-xs font-semibold">
+              Yükle
+            </button>
+            <button onclick="deleteSavedNews('${item.id}')" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold">
+              Sil
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  html += `
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function loadSavedNews(id) {
+  const list = getSavedNews();
+  const item = list.find(x => x.id === id);
+  if (!item) return;
+
+  document.getElementById('saved-news-modal')?.remove();
+
+  document.getElementById('editorial-raw-text').value = item.content;
+  document.getElementById('editorial-edited-raw').value = item.content;
+  document.getElementById('editorial-edited-text').innerHTML = marked.parse(item.content);
+
+  if (item.report) {
+    document.getElementById('editorial-report-raw').value = item.report;
+    document.getElementById('editorial-report-text').innerHTML = marked.parse(item.report);
+  }
+
+  document.getElementById('editorial-result-container')?.classList.remove('hidden');
+  alert(`"${item.title}" yüklendi.`);
+}
+
+function deleteSavedNews(id) {
+  if (!confirm('Bu haberi silmek istediğinize emin misiniz?')) return;
+  let list = getSavedNews();
+  list = list.filter(x => x.id !== id);
+  localStorage.setItem('habervar_saved_news', JSON.stringify(list));
+  document.getElementById('saved-news-modal')?.remove();
+  showSavedNewsModal();
+}
+
+// PROMPTER CRUD
+function getSavedPrompters() {
+  try {
+    return JSON.parse(localStorage.getItem('habervar_saved_prompters') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveOrUpdatePrompterScript() {
+  const content = document.getElementById('tv-raw-result')?.value || '';
+  if (!content.trim()) {
+    alert('Kaydedilecek TV / prompter bülteni bulunamadı.');
+    return;
+  }
+
+  let defaultTitle = 'TV_Bulten_' + new Date().toLocaleString('tr-TR');
+  const kjLine = content.split('\n').find(l => l.trim().startsWith('KJ:'));
+  if (kjLine) defaultTitle = kjLine.replace('KJ:', '').trim().substring(0, 30);
+
+  const title = prompt('Prompter Bülten Başlığını Giriniz:', defaultTitle);
+  if (!title) return;
+
+  const list = getSavedPrompters();
+  const newItem = {
+    id: Date.now().toString(),
+    title: title.trim(),
+    content: content.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  list.unshift(newItem);
+  localStorage.setItem('habervar_saved_prompters', JSON.stringify(list));
+  alert(`"${title}" başarıyla kaydedildi!`);
+}
+
+function showSavedPrompterModal() {
+  const list = getSavedPrompters();
+  let html = `
+    <div id="saved-prompter-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+          <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+            <i class="fa-solid fa-tv text-sky-600"></i> Kayıtlı TV & Prompter Bültenleri (${list.length})
+          </h3>
+          <button onclick="document.getElementById('saved-prompter-modal').remove()" class="text-slate-400 hover:text-slate-700 text-lg">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="overflow-y-auto space-y-2 flex-1">
+  `;
+
+  if (list.length === 0) {
+    html += '<p class="text-sm text-slate-500 py-8 text-center">Henüz kayıtlı bülten bulunmuyor.</p>';
+  } else {
+    list.forEach(item => {
+      const dateStr = new Date(item.updatedAt).toLocaleString('tr-TR');
+      html += `
+        <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+          <div class="overflow-hidden">
+            <div class="font-bold text-xs text-slate-900 truncate">${item.title}</div>
+            <div class="text-[10px] text-slate-500">${dateStr}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="loadSavedPrompter('${item.id}')" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold">
+              Yükle
+            </button>
+            <button onclick="deleteSavedPrompter('${item.id}')" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold">
+              Sil
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  html += `
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function loadSavedPrompter(id) {
+  const list = getSavedPrompters();
+  const item = list.find(x => x.id === id);
+  if (!item) return;
+
+  document.getElementById('saved-prompter-modal')?.remove();
+
+  document.getElementById('tv-raw-result').value = item.content;
+  document.getElementById('tv-result-text').textContent = item.content;
+  document.getElementById('tv-result-container')?.classList.remove('hidden');
+  alert(`"${item.title}" yüklendi.`);
+}
+
+function deleteSavedPrompter(id) {
+  if (!confirm('Bu bülteni silmek istediğinize emin misiniz?')) return;
+  let list = getSavedPrompters();
+  list = list.filter(x => x.id !== id);
+  localStorage.setItem('habervar_saved_prompters', JSON.stringify(list));
+  document.getElementById('saved-prompter-modal')?.remove();
+  showSavedPrompterModal();
 }

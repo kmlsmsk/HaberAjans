@@ -28,7 +28,7 @@ except ImportError:
 # FASTAPI UYGULAMA YAPILANDIRMASI
 # ---------------------------------------------------------
 app = FastAPI(
-    title="HaberCiM - Akıllı Haber Üretim & AI Medya Asistanı",
+    title="HaberVAR - Akıllı Haber Üretim & AI Medya Asistanı",
     description="Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)",
     version="1.0.0"
 )
@@ -49,24 +49,26 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Varsayılan Anonim Kurumsal Parametreler
-DEFAULT_UNIVERSITY = "XXXX Üniversitesi"
-DEFAULT_AGENCY = "XXX Ajans"
-DEFAULT_RECTOR = "Prof. Dr. XXXX YYYY"
+DEFAULT_UNIVERSITY = "ABC Üniversitesi"
+DEFAULT_AGENCY = "ABC Ajansı"
+DEFAULT_RECTOR = "Prof. Dr. Adı Soyadı"
 DEFAULT_CITY = "İZMİR"
-DEFAULT_PORTAL = "www.xxxajans.com"
+DEFAULT_PORTAL = "www.abcajansi.com"
 DEFAULT_MODEL = "gemini-2.5-flash"
 
 FALLBACK_MODELS = [
     "gemini-2.5-flash",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
-    "gemini-3.8-flash",
-    "gemini-3.1-pro-preview",
-    "gemini-3-flash-preview"
+    "gemini-1.5-pro"
 ]
 
 MODEL_ALIASES = {
     "gemini-2.5-pro": "gemini-2.5-flash",
+    "gemini-3.8-flash": "gemini-2.5-flash",
+    "gemini-3.8-live": "gemini-2.5-flash",
+    "gemini-3.8-live-extended-thinking": "gemini-2.5-flash",
+    "gemini-3-flash-preview": "gemini-2.5-flash",
     "gemini-1.5-pro": "gemini-2.5-flash",
     "gemini-pro": "gemini-2.5-flash",
     "flash": "gemini-2.5-flash",
