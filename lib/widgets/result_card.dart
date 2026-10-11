@@ -127,7 +127,7 @@ class _ResultCardState extends State<ResultCard> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        Share.shareXFiles([XFile(file.path)], text: 'HaberCiM - $title');
+                        Share.shareXFiles([XFile(file.path)], text: 'HaberVAR - $title');
                       },
                       icon: const Icon(Icons.share),
                       label: const Text('Paylaş'),

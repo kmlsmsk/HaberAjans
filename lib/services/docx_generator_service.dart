@@ -75,7 +75,7 @@ class DocxGeneratorService {
     final coreXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <dc:title>${_escapeXml(title)}</dc:title>
-  <dc:creator>Dr. Kemal ŞİMŞEK - Bilgisayar Mühendisi (HaberCiM - Ege Ajans)</dc:creator>
+  <dc:creator>Dr. Kemal ŞİMŞEK - Bilgisayar Mühendisi (HaberVAR)</dc:creator>
   <cp:lastModifiedBy>Dr. Kemal ŞİMŞEK - Bilgisayar Mühendisi</cp:lastModifiedBy>
   <dcterms:created xsi:type="dcterms:W3CDTF">$nowIso</dcterms:created>
   <dcterms:modified xsi:type="dcterms:W3CDTF">$nowIso</dcterms:modified>
@@ -85,7 +85,7 @@ class DocxGeneratorService {
     // 6. docProps/app.xml
     const appXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
-  <Application>HaberCiM - Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)</Application>
+  <Application>HaberVAR - Geliştiren: Dr. Kemal ŞİMŞEK (Bilgisayar Mühendisi)</Application>
 </Properties>''';
     _addStringToArchive(archive, 'docProps/app.xml', appXml);
 

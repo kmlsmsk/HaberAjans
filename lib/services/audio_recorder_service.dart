@@ -7,7 +7,7 @@ import 'package:record_platform_interface/record_platform_interface.dart';
 
 class AudioRecorderService {
   final AudioPlayer _audioPlayer = AudioPlayer();
-  static const String _recorderId = 'habercim_recorder';
+  static const String _recorderId = 'habervar_recorder';
   bool _isCreated = false;
 
   bool _isRecording = false;
@@ -54,7 +54,7 @@ class AudioRecorderService {
 
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = '${tempDir.path}/habercim_rec_$timestamp.m4a';
+      final filePath = '${tempDir.path}/habervar_rec_$timestamp.m4a';
 
       const config = RecordConfig(
         encoder: AudioEncoder.aacLc,
